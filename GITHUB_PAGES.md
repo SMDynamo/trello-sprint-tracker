@@ -5,7 +5,9 @@ This repository is configured to be hosted on GitHub Pages. The Power-Up files a
 ## Files Structure
 
 - `index.html` - Main Power-Up iframe connector page
-- `js/sprint-tracker.js` - Core Power-Up functionality and Trello API integration
+- `client.js` - Core Power-Up functionality and Trello API integration (main entry point)
+- `js/iframe.js` - Dashboard iframe functionality
+- `js/sprint-tracker.js` - Legacy file (kept for reference)
 - `settings.html` - Settings popup for manual variable editing
 - `styles.css` - Styling for all UI components
 - `manifest.json` - Power-Up manifest file (for reference)
