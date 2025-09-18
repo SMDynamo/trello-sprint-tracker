@@ -9,6 +9,8 @@ A Trello Power-Up hosted on GitHub Pages for agile teams. Tracks sprint number, 
 - **Sprint Management**: Board button starts a new sprint (increments sprint, resets branch=100, resets points=0)
 - **Points Tracking**: Supports "estimate" custom field to add completed points to sprint total
 - **Board-Level Storage**: All data is stored at the board level, shared across team members
+- **Live Dashboard**: Board badge showing current sprint status with auto-refresh
+- **Branch Attachments**: Automatically attaches branch info to cards and copies to clipboard
 
 ## Installation
 
@@ -24,7 +26,8 @@ A Trello Power-Up hosted on GitHub Pages for agile teams. Tracks sprint number, 
 1. Open any card
 2. Click the "Create Branch" button in the card
 3. The branch name will be created in format `{sprint}-{branch}` (e.g., "44-100")
-4. The branch counter automatically increments for the next branch
+4. Branch name is copied to clipboard and attached to the card
+5. The branch counter automatically increments for the next branch
 
 ### Starting New Sprints
 1. From the board view, click the "Start New Sprint" button in the board header
@@ -38,7 +41,7 @@ A Trello Power-Up hosted on GitHub Pages for agile teams. Tracks sprint number, 
 1. Add a custom field named "estimate" to your cards (number type)
 2. Set the estimate value for each card
 3. The estimate will be displayed as a badge on the card
-4. Click the badge on a card to add those points to the sprint total
+4. Click "Add estimate to sprint" button on a card to add those points to the sprint total
 
 ### Settings
 - Click the Power-Up settings to manually adjust sprint number, branch counter, or points
@@ -65,7 +68,10 @@ To modify this Power-Up:
 - `index.html` - Main Power-Up interface
 - `js/sprint-tracker.js` - Core Power-Up functionality
 - `settings.html` - Settings interface
+- `styles.css` - Styling for all UI components
 - `manifest.json` - Power-Up manifest for Trello
+- `icon-light.svg` / `icon-dark.svg` - Power-Up icons
+- `GITHUB_PAGES.md` - GitHub Pages setup guide
 
 ## License
 

@@ -21,7 +21,10 @@ let t = null;
 window.TrelloPowerUp.initialize({
     'board-buttons': function(t, options) {
         return [{
-            icon: 'https://cdn.iconscout.com/icon/free/png-256/sprint-1-282777.png',
+            icon: {
+                dark: './icon-light.svg',
+                light: './icon-dark.svg'
+            },
             text: 'Start New Sprint',
             callback: function(t) {
                 return startNewSprint(t);
@@ -30,12 +33,30 @@ window.TrelloPowerUp.initialize({
     },
     'card-buttons': function(t, options) {
         return [{
-            icon: 'https://cdn.iconscout.com/icon/free/png-256/branch-1-282775.png', 
+            icon: {
+                dark: './icon-light.svg',
+                light: './icon-dark.svg'
+            }, 
             text: 'Create Branch',
             callback: function(t) {
                 return createBranch(t);
             }
+        }, {
+            icon: {
+                dark: './icon-light.svg',
+                light: './icon-dark.svg'
+            },
+            text: 'Add estimate to sprint',
+            callback: function(t) {
+                return addEstimateToSprint(t);
+            }
         }];
+    },
+    'board-badges': function(t, options) {
+        return getBoardBadge(t);
+    },
+    'board-badges': function(t, options) {
+        return getBoardBadge(t);
     },
     'show-settings': function(t, options) {
         return t.popup({
@@ -137,21 +158,38 @@ async function createBranch(trelloContext = null) {
         const saved = await saveSprintData(context, data);
         
         if (saved) {
-            // Show success message
-            await context.alert({
-                message: `Branch created: ${branchName}\nNext branch will be: ${data.sprint}-${data.branch}`,
-                duration: 5
-            });
-            
             // Copy branch name to clipboard if possible
+            let copied = false;
             if (navigator.clipboard) {
                 try {
                     await navigator.clipboard.writeText(branchName);
                     console.log('Branch name copied to clipboard');
+                    copied = true;
                 } catch (clipboardError) {
                     console.log('Could not copy to clipboard:', clipboardError);
                 }
             }
+            
+            // Attach branch info to the card
+            try {
+                await context.attach({
+                    name: `Branch: ${branchName}`,
+                    url: `#branch-${branchName}`
+                });
+            } catch (attachError) {
+                console.warn('Could not attach branch to card:', attachError);
+                // Continue execution even if attachment fails
+            }
+            
+            // Show success message
+            const message = copied 
+                ? `Branch ${branchName} created and copied to clipboard!`
+                : `Branch ${branchName} created and attached to card!`;
+                
+            await context.alert({
+                message: message,
+                duration: 5
+            });
         } else {
             await context.alert({
                 message: 'Error creating branch. Please try again.',
@@ -313,6 +351,125 @@ function showMessage(text, type = 'info') {
     setTimeout(() => {
         messageDiv.style.display = 'none';
     }, 5000);
+}
+
+// Add estimate from card to sprint points
+async function addEstimateToSprint(trelloContext = null) {
+    const context = trelloContext || t;
+    
+    try {
+        // Get card's custom fields
+        const card = await context.card('customFieldItems');
+        if (!card.customFieldItems || card.customFieldItems.length === 0) {
+            return context.alert({
+                message: 'No custom fields found on this card. Please add an "estimate" field.',
+                duration: 4
+            });
+        }
+        
+        // Get board's custom field definitions
+        const board = await context.board('customFields');
+        if (!board.customFields || board.customFields.length === 0) {
+            return context.alert({
+                message: 'No custom fields defined on this board. Please add an "estimate" number field.',
+                duration: 4
+            });
+        }
+        
+        // Find estimate field
+        const estimateField = board.customFields.find(field => 
+            field.name && field.name.toLowerCase() === 'estimate' && field.type === 'number'
+        );
+        
+        if (!estimateField) {
+            return context.alert({
+                message: 'No "estimate" number field found. Please create one using Custom Fields Power-Up.',
+                duration: 5
+            });
+        }
+        
+        // Find the field value on the card
+        const fieldItem = card.customFieldItems.find(item => 
+            item.idCustomField === estimateField.id
+        );
+        
+        if (!fieldItem || !fieldItem.value || !fieldItem.value.number) {
+            return context.alert({
+                message: 'No estimate value set on this card. Please set a number value for the estimate field.',
+                duration: 4
+            });
+        }
+        
+        const estimate = parseFloat(fieldItem.value.number);
+        if (estimate <= 0) {
+            return context.alert({
+                message: 'Estimate must be greater than 0.',
+                duration: 4
+            });
+        }
+        
+        // Get current sprint data and add estimate
+        const data = await getSprintData(context);
+        data.points += estimate;
+        
+        // Save updated data
+        const saved = await saveSprintData(context, data);
+        
+        if (saved) {
+            await context.alert({
+                message: `Added ${estimate} points to sprint total (now ${data.points} points)`,
+                duration: 4
+            });
+        } else {
+            await context.alert({
+                message: 'Error adding points. Please try again.',
+                duration: 3
+            });
+        }
+        
+        // Update display if we're on the main page
+        if (typeof updateDisplay === 'function') {
+            updateDisplay();
+        }
+        
+    } catch (error) {
+        console.error('Error in addEstimateToSprint:', error);
+        if (context && context.alert) {
+            await context.alert({
+                message: 'Error adding estimate. Please check console for details.',
+                duration: 3
+            });
+        }
+    }
+}
+
+// Get board badge for sprint status
+async function getBoardBadge(t) {
+    try {
+        const data = await getSprintData(t);
+        
+        return [{
+            dynamic: function() {
+                return {
+                    title: 'Sprint Tracker',
+                    text: `Sprint #${data.sprint} • Pts ${data.points}`,
+                    icon: {
+                        dark: './icon-light.svg',
+                        light: './icon-dark.svg'
+                    },
+                    color: 'blue',
+                    refresh: 10
+                };
+            }
+        }];
+    } catch (error) {
+        console.error('Error in getBoardBadge:', error);
+        return [{
+            title: 'Sprint Tracker',
+            text: 'Error loading sprint data',
+            color: 'red'
+        }];
+    }
 }
 
 // Initialize when page loads
