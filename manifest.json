@@ -5,9 +5,10 @@
     "capabilities": [
         "board-buttons",
         "card-buttons",
+        "board-badges",
         "show-settings"
     ],
     "connectorUrl": "https://smdynamo.github.io/trello-sprint-tracker/",
-    "iconUrl": "https://cdn.iconscout.com/icon/free/png-256/sprint-1-282777.png",
+    "iconUrl": "./icon-light.svg",
     "tags": ["productivity", "agile", "sprint", "branch", "tracking"]
 }
