@@ -226,15 +226,16 @@ async function useNextBranchHandler(t) {
         // Copy to clipboard
         const copied = await copyToClipboard(branchName);
         
-        // Comment on the card
-        await t.card('id').then(async (card) => {
-            const comment = `Branch: ${branchName}`;
-            // Note: t.card('comments') is read-only, so we'll use the attachment instead
-            return t.attach({
+        // Attach branch info to the card
+        try {
+            await t.attach({
                 name: `Branch: ${branchName}`,
                 url: `#branch-${branchName}`
             });
-        });
+        } catch (attachError) {
+            console.warn('Could not attach branch to card:', attachError);
+            // Continue execution even if attachment fails
+        }
         
         // Increment branch counter
         await setBoardVar(t, BOARD_VARS.NEXT_BRANCH_NUMBER, branchNumber + 1);
