@@ -86,12 +86,12 @@ async function createBranch(trelloContext) {
                 ? `Branch ${branchName} created and copied to clipboard!`
                 : `Branch ${branchName} created and attached to card!`;
                 
-            await trelloContext.alert({
+            return trelloContext.alert({
                 message: message,
                 duration: 5
             });
         } else {
-            await trelloContext.alert({
+            return trelloContext.alert({
                 message: 'Error creating branch. Please try again.',
                 duration: 3
             });
@@ -100,7 +100,7 @@ async function createBranch(trelloContext) {
     } catch (error) {
         console.error('Error in createBranch:', error);
         if (trelloContext && trelloContext.alert) {
-            await trelloContext.alert({
+            return trelloContext.alert({
                 message: 'Error creating branch. Please check console for details.',
                 duration: 3
             });
@@ -128,12 +128,12 @@ async function startNewSprint(trelloContext) {
             const saved = await saveSprintData(trelloContext, data);
             
             if (saved) {
-                await trelloContext.alert({
+                return trelloContext.alert({
                     message: `Sprint ${data.sprint} started!\nBranch counter reset to ${data.branch}\nPoints reset to ${data.points}`,
                     duration: 5
                 });
             } else {
-                await trelloContext.alert({
+                return trelloContext.alert({
                     message: 'Error starting new sprint. Please try again.',
                     duration: 3
                 });
@@ -143,7 +143,7 @@ async function startNewSprint(trelloContext) {
     } catch (error) {
         console.error('Error in startNewSprint:', error);
         if (trelloContext && trelloContext.alert) {
-            await trelloContext.alert({
+            return trelloContext.alert({
                 message: 'Error starting new sprint. Please check console for details.',
                 duration: 3
             });
@@ -163,12 +163,12 @@ async function addPointsToSprint(trelloContext, points) {
         const saved = await saveSprintData(trelloContext, data);
         
         if (saved) {
-            await trelloContext.alert({
+            return trelloContext.alert({
                 message: `Added ${points} points to sprint!\nTotal points done: ${data.points}`,
                 duration: 3
             });
         } else {
-            await trelloContext.alert({
+            return trelloContext.alert({
                 message: 'Error adding points. Please try again.',
                 duration: 3
             });
@@ -177,7 +177,7 @@ async function addPointsToSprint(trelloContext, points) {
     } catch (error) {
         console.error('Error in addPointsToSprint:', error);
         if (trelloContext && trelloContext.alert) {
-            await trelloContext.alert({
+            return trelloContext.alert({
                 message: 'Error adding points. Please check console for details.',
                 duration: 3
             });
@@ -246,12 +246,12 @@ async function addEstimateToSprint(trelloContext) {
         const saved = await saveSprintData(trelloContext, data);
         
         if (saved) {
-            await trelloContext.alert({
+            return trelloContext.alert({
                 message: `Added ${estimate} points to sprint total (now ${data.points} points)`,
                 duration: 4
             });
         } else {
-            await trelloContext.alert({
+            return trelloContext.alert({
                 message: 'Error adding points. Please try again.',
                 duration: 3
             });
@@ -260,7 +260,7 @@ async function addEstimateToSprint(trelloContext) {
     } catch (error) {
         console.error('Error in addEstimateToSprint:', error);
         if (trelloContext && trelloContext.alert) {
-            await trelloContext.alert({
+            return trelloContext.alert({
                 message: 'Error adding estimate. Please check console for details.',
                 duration: 3
             });
