@@ -20,6 +20,11 @@ A Trello Power-Up hosted on GitHub Pages for agile teams. Tracks sprint number, 
 4. Select "Custom" and enter the Power-Up URL: `https://smdynamo.github.io/trello-sprint-tracker/`
 5. Enable the Power-Up
 
+**Troubleshooting**: If the Power-Up doesn't appear on your board:
+- Verify `https://smdynamo.github.io/trello-sprint-tracker/client.js` loads JavaScript code in your browser
+- Check Trello Power-Up admin settings have the correct URL and enabled capabilities
+- Open browser console (F12) on your Trello board to check for loading errors
+
 ## Usage
 
 ### Creating Branches
@@ -53,6 +58,15 @@ A Trello Power-Up hosted on GitHub Pages for agile teams. Tracks sprint number, 
 - Uses Trello's board-level private storage for data persistence
 - Hosted on GitHub Pages for easy deployment
 - No external dependencies beyond Trello's Power-Up SDK
+- **Main entry point**: `client.js` (required by Trello Power-Up framework)
+
+## Trello Power-Up Configuration
+
+When setting up in Trello's Power-Up admin portal, ensure:
+
+- **Iframe connector URL**: `https://smdynamo.github.io/trello-sprint-tracker/`
+- **Capabilities enabled**: `board-buttons`, `card-buttons`, `board-badges`, `show-settings`
+- **Client.js accessibility**: Verify `https://smdynamo.github.io/trello-sprint-tracker/client.js` returns JavaScript code
 
 ## Development
 
@@ -66,7 +80,9 @@ To modify this Power-Up:
 ## File Structure
 
 - `index.html` - Main Power-Up interface
-- `js/sprint-tracker.js` - Core Power-Up functionality
+- `client.js` - Core Power-Up functionality (main entry point for Trello)
+- `js/iframe.js` - Dashboard iframe functionality  
+- `js/sprint-tracker.js` - Legacy file (kept for reference)
 - `settings.html` - Settings interface
 - `styles.css` - Styling for all UI components
 - `manifest.json` - Power-Up manifest for Trello
