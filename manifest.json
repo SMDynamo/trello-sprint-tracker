@@ -1,0 +1,18 @@
+{
+  "name": "Sprint Tracker",
+  "details": "A lightweight Trello Power-Up for agile sprint tracking and branch naming",
+  "author": "Sprint Tracker Team",
+  "capabilities": [
+    "board-buttons",
+    "card-buttons", 
+    "board-badges"
+  ],
+  "connectors": {
+    "iframe": {
+      "url": "./index.html"
+    }
+  },
+  "icon": {
+    "url": "./icon-light.svg"
+  }
+}

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Sprint Settings</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            padding: 10px;
+            background: white;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .settings-container {
+            max-width: 100%;
+        }
+        .form-group {
+            margin-bottom: 12px;
+        }
+        .form-actions {
+            margin-top: 20px;
+            text-align: right;
+        }
+        .btn {
+            margin-left: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="settings-container">
+        <h3>Sprint Settings</h3>
+        
+        <div class="info-panel">
+            <div class="info-item">
+                <span class="info-label">Current Sprint:</span>
+                <span class="info-value" id="current-sprint">-</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Next Branch #:</span>
+                <span class="info-value" id="current-branch">-</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Points Done:</span>
+                <span class="info-value" id="current-points">-</span>
+            </div>
+        </div>
+
+        <form id="settings-form">
+            <div class="form-group">
+                <label for="sprint-number">Sprint Number:</label>
+                <input type="number" id="sprint-number" min="1" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="branch-number">Next Branch Number:</label>
+                <input type="number" id="branch-number" min="100" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="points-done">Points Done:</label>
+                <input type="number" id="points-done" min="0" step="0.5" required>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" id="cancel-btn">Cancel</button>
+                <button type="submit" class="btn">Save Changes</button>
+            </div>
+        </form>
+    </div>
+
+    <script src="https://p.trellocdn.com/power-up.min.js"></script>
+    <script>
+        const t = TrelloPowerUp.iframe();
+        
+        // Board variable keys
+        const BOARD_VARS = {
+            SPRINT_NUMBER: 'sprintNumber',
+            NEXT_BRANCH_NUMBER: 'nextBranchNumber', 
+            POINTS_DONE: 'pointsDone'
+        };
+
+        // Helper function to get board variable
+        async function getBoardVar(key, defaultValue = 0) {
+            try {
+                const data = await t.get('board', 'shared', key);
+                return data !== undefined ? data : defaultValue;
+            } catch (error) {
+                console.error(`Error getting board variable ${key}:`, error);
+                return defaultValue;
+            }
+        }
+
+        // Helper function to set board variable
+        async function setBoardVar(key, value) {
+            try {
+                await t.set('board', 'shared', key, value);
+                console.log(`Set ${key} to ${value}`);
+            } catch (error) {
+                console.error(`Error setting board variable ${key}:`, error);
+                throw error;
+            }
+        }
+
+        // Initialize the popup
+        async function init() {
+            try {
+                // Get current values
+                const sprintNumber = await getBoardVar(BOARD_VARS.SPRINT_NUMBER, 1);
+                const nextBranchNumber = await getBoardVar(BOARD_VARS.NEXT_BRANCH_NUMBER, 100);
+                const pointsDone = await getBoardVar(BOARD_VARS.POINTS_DONE, 0);
+                
+                // Update display values
+                document.getElementById('current-sprint').textContent = sprintNumber;
+                document.getElementById('current-branch').textContent = nextBranchNumber;
+                document.getElementById('current-points').textContent = pointsDone;
+                
+                // Set form values
+                document.getElementById('sprint-number').value = sprintNumber;
+                document.getElementById('branch-number').value = nextBranchNumber;
+                document.getElementById('points-done').value = pointsDone;
+                
+                // Resize popup to fit content
+                t.sizeTo('#settings-form');
+                
+            } catch (error) {
+                console.error('Error initializing settings:', error);
+            }
+        }
+
+        // Handle form submission
+        document.getElementById('settings-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            try {
+                const sprintNumber = parseInt(document.getElementById('sprint-number').value);
+                const branchNumber = parseInt(document.getElementById('branch-number').value);
+                const pointsDone = parseFloat(document.getElementById('points-done').value);
+                
+                // Validate inputs
+                if (sprintNumber < 1) {
+                    alert('Sprint number must be at least 1');
+                    return;
+                }
+                if (branchNumber < 100) {
+                    alert('Branch number must be at least 100');
+                    return;
+                }
+                if (pointsDone < 0) {
+                    alert('Points done cannot be negative');
+                    return;
+                }
+                
+                // Save the values
+                await setBoardVar(BOARD_VARS.SPRINT_NUMBER, sprintNumber);
+                await setBoardVar(BOARD_VARS.NEXT_BRANCH_NUMBER, branchNumber);
+                await setBoardVar(BOARD_VARS.POINTS_DONE, pointsDone);
+                
+                // Close popup
+                t.closePopup();
+                
+            } catch (error) {
+                console.error('Error saving settings:', error);
+                alert('Failed to save settings. Please try again.');
+            }
+        });
+
+        // Handle cancel button
+        document.getElementById('cancel-btn').addEventListener('click', function() {
+            t.closePopup();
+        });
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
