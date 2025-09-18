@@ -304,7 +304,7 @@ async function showBoardVars(t) {
         
         return t.popup({
             title: 'Sprint Tracker - Board Variables',
-            url: t.signUrl('./settings.html'),
+            url: './settings.html',
             height: 400
         });
     } catch (error) {
@@ -366,7 +366,7 @@ window.TrelloPowerUp.initialize({
     'show-settings': function(t, options) {
         return t.popup({
             title: 'Sprint Tracker Settings',
-            url: t.signUrl('./settings.html'),
+            url: './settings.html',
             height: 400
         });
     },
