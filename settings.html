@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sprint Tracker Settings</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f5f7;
+        }
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #172b4d;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #172b4d;
+        }
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .button {
+            background: #0079bf;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            width: 100%;
+            margin: 5px 0;
+        }
+        .button:hover {
+            background: #005a8b;
+        }
+        .button.secondary {
+            background: #6c757d;
+        }
+        .button.secondary:hover {
+            background: #545b62;
+        }
+        .info {
+            background: #e4fcff;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 4px solid #00c2e0;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+        .status {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .status h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #172b4d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Sprint Tracker Settings</h2>
+        
+        <div class="status" id="currentStatus">
+            <h3>Current Values</h3>
+            <p>Sprint: <span id="currentSprint">--</span></p>
+            <p>Next Branch: <span id="currentBranch">--</span></p>
+            <p>Points Done: <span id="currentPoints">--</span></p>
+        </div>
+
+        <div class="info">
+            <strong>Note:</strong> These settings affect the entire board and all team members using this Power-Up.
+        </div>
+
+        <div class="form-group">
+            <label for="sprintNumber">Sprint Number:</label>
+            <input type="number" id="sprintNumber" min="1" placeholder="Enter sprint number">
+        </div>
+
+        <div class="form-group">
+            <label for="branchCounter">Branch Counter:</label>
+            <input type="number" id="branchCounter" min="100" placeholder="Enter branch counter">
+        </div>
+
+        <div class="form-group">
+            <label for="pointsDone">Points Done:</label>
+            <input type="number" id="pointsDone" min="0" placeholder="Enter points done">
+        </div>
+
+        <button class="button" onclick="saveSettings()">Save Settings</button>
+        <button class="button secondary" onclick="loadCurrentValues()">Reset to Current</button>
+        
+        <div id="message" style="margin-top: 15px; padding: 10px; display: none; border-radius: 4px;"></div>
+    </div>
+
+    <script src="https://p.trellocdn.com/power-up.min.js"></script>
+    <script>
+        let t = window.TrelloPowerUp.iframe();
+
+        // Storage keys - must match main script
+        const STORAGE_KEYS = {
+            sprint: 'sprint_tracker_sprint',
+            branch: 'sprint_tracker_branch', 
+            points: 'sprint_tracker_points'
+        };
+
+        const DEFAULT_VALUES = {
+            sprint: 1,
+            branch: 100,
+            points: 0
+        };
+
+        // Load current values from storage
+        async function loadCurrentValues() {
+            try {
+                const boardData = await t.get('board', 'private');
+                const currentData = {
+                    sprint: boardData[STORAGE_KEYS.sprint] || DEFAULT_VALUES.sprint,
+                    branch: boardData[STORAGE_KEYS.branch] || DEFAULT_VALUES.branch,
+                    points: boardData[STORAGE_KEYS.points] || DEFAULT_VALUES.points
+                };
+
+                // Update current status display
+                document.getElementById('currentSprint').textContent = currentData.sprint;
+                document.getElementById('currentBranch').textContent = `${currentData.sprint}-${currentData.branch}`;
+                document.getElementById('currentPoints').textContent = currentData.points;
+
+                // Fill form fields
+                document.getElementById('sprintNumber').value = currentData.sprint;
+                document.getElementById('branchCounter').value = currentData.branch;
+                document.getElementById('pointsDone').value = currentData.points;
+
+                showMessage('Current values loaded', 'success');
+            } catch (error) {
+                console.error('Error loading current values:', error);
+                showMessage('Error loading current values', 'error');
+            }
+        }
+
+        // Save new settings
+        async function saveSettings() {
+            try {
+                const sprint = parseInt(document.getElementById('sprintNumber').value);
+                const branch = parseInt(document.getElementById('branchCounter').value);
+                const points = parseInt(document.getElementById('pointsDone').value);
+
+                if (isNaN(sprint) || sprint < 1) {
+                    showMessage('Sprint number must be 1 or greater', 'error');
+                    return;
+                }
+
+                if (isNaN(branch) || branch < 100) {
+                    showMessage('Branch counter must be 100 or greater', 'error');
+                    return;
+                }
+
+                if (isNaN(points) || points < 0) {
+                    showMessage('Points done must be 0 or greater', 'error');
+                    return;
+                }
+
+                // Save to board storage
+                await t.set('board', 'private', {
+                    [STORAGE_KEYS.sprint]: sprint,
+                    [STORAGE_KEYS.branch]: branch,
+                    [STORAGE_KEYS.points]: points
+                });
+
+                showMessage('Settings saved successfully!', 'success');
+                
+                // Refresh the current status
+                setTimeout(loadCurrentValues, 1000);
+
+            } catch (error) {
+                console.error('Error saving settings:', error);
+                showMessage('Error saving settings', 'error');
+            }
+        }
+
+        // Show message to user
+        function showMessage(text, type = 'info') {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.style.display = 'block';
+            messageDiv.style.backgroundColor = type === 'error' ? '#ffebee' : 
+                                             type === 'success' ? '#e8f5e8' : '#e3f2fd';
+            messageDiv.style.color = type === 'error' ? '#c62828' : 
+                                    type === 'success' ? '#2e7d32' : '#1565c0';
+            messageDiv.style.border = `1px solid ${type === 'error' ? '#ef5350' : 
+                                                  type === 'success' ? '#4caf50' : '#2196f3'}`;
+            
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // Load current values when page loads
+        document.addEventListener('DOMContentLoaded', loadCurrentValues);
+    </script>
+</body>
+</html>

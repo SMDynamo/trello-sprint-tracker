@@ -1,0 +1,13 @@
+{
+    "name": "Sprint Tracker",
+    "details": "Track sprint numbers, branch counters, and completed points for agile teams",
+    "author": "SMDynamo",
+    "capabilities": [
+        "board-buttons",
+        "card-buttons",
+        "show-settings"
+    ],
+    "connectorUrl": "https://smdynamo.github.io/trello-sprint-tracker/",
+    "iconUrl": "https://cdn.iconscout.com/icon/free/png-256/sprint-1-282777.png",
+    "tags": ["productivity", "agile", "sprint", "branch", "tracking"]
+}
