@@ -55,9 +55,6 @@ window.TrelloPowerUp.initialize({
     'board-badges': function(t, options) {
         return getBoardBadge(t);
     },
-    'board-badges': function(t, options) {
-        return getBoardBadge(t);
-    },
     'show-settings': function(t, options) {
         return t.popup({
             title: 'Sprint Tracker Settings',
