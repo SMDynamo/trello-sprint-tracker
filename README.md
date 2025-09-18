@@ -20,6 +20,8 @@ A Trello Power-Up hosted on GitHub Pages for agile teams. Tracks sprint number, 
 4. Select "Custom" and enter the Power-Up URL: `https://smdynamo.github.io/trello-sprint-tracker/`
 5. Enable the Power-Up
 
+**Demo**: You can view a demonstration of the interface at `https://smdynamo.github.io/trello-sprint-tracker/demo.html`
+
 **Troubleshooting**: If the Power-Up doesn't appear on your board:
 - Verify `https://smdynamo.github.io/trello-sprint-tracker/client.js` loads JavaScript code in your browser
 - Check Trello Power-Up admin settings have the correct URL and enabled capabilities
@@ -79,7 +81,8 @@ To modify this Power-Up:
 
 ## File Structure
 
-- `index.html` - Main Power-Up interface
+- `index.html` - Main Power-Up connector (loaded by Trello)
+- `demo.html` - Demonstration dashboard page
 - `client.js` - Core Power-Up functionality (main entry point for Trello)
 - `js/iframe.js` - Dashboard iframe functionality  
 - `js/sprint-tracker.js` - Legacy file (kept for reference)

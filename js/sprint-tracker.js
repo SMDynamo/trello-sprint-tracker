@@ -310,24 +310,9 @@ async function refreshStatus() {
 
 // Update the display with current sprint data (for main page)
 async function updateDisplay() {
-    if (!window.TrelloPowerUp || !window.TrelloPowerUp.iframe) {
-        showMessage('This page needs to be loaded as a Trello Power-Up', 'error');
-        return;
-    }
-    
-    try {
-        t = window.TrelloPowerUp.iframe();
-        const data = await getSprintData(t);
-        
-        document.getElementById('current-sprint').textContent = data.sprint;
-        document.getElementById('next-branch').textContent = `${data.sprint}-${data.branch}`;
-        document.getElementById('points-done').textContent = data.points;
-        
-        showMessage('Status updated successfully', 'success');
-    } catch (error) {
-        console.error('Error updating display:', error);
-        showMessage('Error updating status', 'error');
-    }
+    // This function should not be used in the main connector file
+    // It's only for demonstration purposes in iframe contexts
+    showMessage('This function is for demonstration only', 'info');
 }
 
 // Show message to user
@@ -471,10 +456,9 @@ async function getBoardBadge(t) {
 
 // Initialize when page loads
 document.addEventListener('DOMContentLoaded', function() {
-    if (window.TrelloPowerUp && window.TrelloPowerUp.iframe) {
-        t = window.TrelloPowerUp.iframe();
-        updateDisplay();
-    }
+    // Do not call TrelloPowerUp.iframe() in the main connector file
+    // This is only for secondary iframes, not the main Power-Up initialization
+    console.log('Sprint Tracker connector loaded');
 });
 
 // Export functions for global access

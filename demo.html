@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sprint Tracker - Demo Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f5f7;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #172b4d;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .info {
+            background: #e4fcff;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #00c2e0;
+            margin-bottom: 20px;
+        }
+        .button {
+            background: #0079bf;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        .button:hover {
+            background: #005a8b;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Sprint Tracker Power-Up</h1>
+        
+        <div class="info">
+            <strong>Power-Up Status Dashboard:</strong>
+            <p>This is a demonstration page showing the Power-Up interface. The actual Sprint Tracker functionality works inside Trello boards when you add this Power-Up.</p>
+            <p><strong>To use:</strong> Add this Power-Up to your Trello board using URL: <code>https://smdynamo.github.io/trello-sprint-tracker/</code></p>
+        </div>
+
+        <div class="status" id="status">
+            <h3>Demo Status</h3>
+            <p>Sprint: <span id="current-sprint">--</span></p>
+            <p>Next Branch: <span id="next-branch">--</span></p>
+            <p>Points Done: <span id="points-done">--</span></p>
+        </div>
+
+        <div>
+            <button class="button" onclick="createBranch()">Create Branch</button>
+            <button class="button" onclick="startNewSprint()">Start New Sprint</button>
+            <button class="button" onclick="refreshStatus()">Refresh Status</button>
+        </div>
+
+        <div id="message" style="margin-top: 20px; padding: 10px; display: none;"></div>
+    </div>
+
+    <script src="js/iframe.js"></script>
+</body>
+</html>
