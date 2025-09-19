@@ -127,6 +127,8 @@ async function moveToInProgress(trelloContext) {
     try {
         const data = await getSprintData(trelloContext);
         const branchName = `${data.sprint}-${data.branch}`;
+        let successMessages = [];
+        let errorMessages = [];
 
         // Get card and board info
         const card = await trelloContext.card('id');
@@ -145,31 +147,54 @@ async function moveToInProgress(trelloContext) {
         }
 
         // 1. Join the card (add current member)
-        const member = await trelloContext.member('id');
-        await trelloContext.request({
-            method: 'POST',
-            url: `/1/cards/${card.id}/idMembers`,
-            data: { value: member.id }
-        });
+        try {
+            const member = await trelloContext.member('id');
+            await trelloContext.request({
+                method: 'POST',
+                url: `/1/cards/${card.id}/idMembers`,
+                data: { value: member.id }
+            });
+            successMessages.push('Joined card');
+        } catch (err) {
+            console.error('Error joining card:', err);
+            errorMessages.push('Could not join card');
+        }
 
         // 2. Move card to top of In Progress list
-        await trelloContext.request({
-            method: 'PUT',
-            url: `/1/cards/${card.id}`,
-            data: {
-                idList: inProgressList.id,
-                pos: 'top'
-            }
-        });
+        try {
+            await trelloContext.request({
+                method: 'PUT',
+                url: `/1/cards/${card.id}`,
+                data: {
+                    idList: inProgressList.id,
+                    pos: 'top'
+                }
+            });
+            successMessages.push('Moved to In Progress');
+        } catch (err) {
+            console.error('Error moving card:', err);
+            errorMessages.push('Could not move card');
+        }
 
-        // 3. Set Start Date custom field to now
-        await updateCardCustomField(trelloContext, 'Start Date', new Date().toISOString());
+        // 3. Set Start Date custom field to now - only if field exists
+        const startDateSet = await updateCardCustomField(trelloContext, 'Start Date', new Date().toISOString());
+        if (!startDateSet) {
+            console.log('Start Date field not found or not updated');
+        }
 
         // 4. Set Branch custom field
-        await updateCardCustomField(trelloContext, 'Branch', branchName);
+        const branchSet = await updateCardCustomField(trelloContext, 'Branch', branchName);
+        if (branchSet) {
+            successMessages.push(`Branch: ${branchName}`);
+        } else {
+            errorMessages.push('Branch field not found');
+        }
 
         // 5. Set Sprint custom field
-        await updateCardCustomField(trelloContext, 'Sprint', data.sprint);
+        const sprintSet = await updateCardCustomField(trelloContext, 'Sprint', String(data.sprint));
+        if (!sprintSet) {
+            console.log('Sprint field not found or not updated');
+        }
 
         // 6. Increment branch counter for next use
         data.branch += 1;
@@ -179,21 +204,28 @@ async function moveToInProgress(trelloContext) {
         if (navigator.clipboard) {
             try {
                 await navigator.clipboard.writeText(branchName);
+                successMessages.push('Copied to clipboard');
             } catch (err) {
                 console.log('Could not copy to clipboard');
             }
         }
 
+        // Build result message
+        let message = successMessages.join(', ');
+        if (errorMessages.length > 0) {
+            message += '\nWarnings: ' + errorMessages.join(', ');
+        }
+
         return trelloContext.alert({
-            message: `Moved to In Progress with branch ${branchName}`,
+            message: message || 'In Progress action completed',
             duration: 4
         });
 
     } catch (error) {
-        console.error('Error moving to In Progress:', error);
+        console.error('Error in moveToInProgress:', error);
         return trelloContext.alert({
-            message: 'Error: ' + error.message,
-            duration: 4
+            message: `Error: ${error.message || 'Unknown error occurred'}`,
+            duration: 5
         });
     }
 }
