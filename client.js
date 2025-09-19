@@ -192,8 +192,12 @@ async function moveToInProgress(trelloContext) {
 // Move card to Code Review
 async function moveToCodeReview(trelloContext) {
     try {
-        const cardContext = trelloContext.getContext();
-        const card = await trelloContext.request('GET', `/1/cards/${cardContext.card}?fields=id,idList`);
+        console.log('Moving to Code Review...');
+        const context = trelloContext.getContext();
+        const cardId = context.card;
+
+        // Get card data and lists
+        const cardData = await trelloContext.request('GET', `/1/cards/${cardId}?fields=id,idList`);
         const lists = await trelloContext.lists('all');
 
         // Find Code Review list
@@ -201,11 +205,14 @@ async function moveToCodeReview(trelloContext) {
             list.name.toLowerCase().includes('code review')
         );
 
-        if (codeReviewList && card.idList !== codeReviewList.id) {
-            await trelloContext.request('PUT', `/1/cards/${card.id}`, {
+        if (codeReviewList && cardData.idList !== codeReviewList.id) {
+            await trelloContext.request('PUT', `/1/cards/${cardId}`, {
                 idList: codeReviewList.id,
                 pos: 'top'
             });
+            console.log('Moved to Code Review list');
+        } else {
+            console.log('Already in Code Review or list not found');
         }
 
         // Clear Blocker field
@@ -228,9 +235,11 @@ async function moveToCodeReview(trelloContext) {
 // Move card to Done
 async function moveToDone(trelloContext) {
     try {
+        console.log('Moving to Done...');
         const data = await getSprintData(trelloContext);
-        const cardContext = trelloContext.getContext();
-        const card = await trelloContext.request('GET', `/1/cards/${cardContext.card}?fields=id,customFieldItems`);
+        const context = trelloContext.getContext();
+        const cardId = context.card;
+        const card = await trelloContext.request('GET', `/1/cards/${cardId}?fields=id,customFieldItems`);
 
         // Add estimate points to sprint total
         let pointsAdded = 0;
@@ -299,9 +308,11 @@ async function moveToDone(trelloContext) {
 // Move to Awaiting Epic
 async function moveToAwaitingEpic(trelloContext) {
     try {
+        console.log('Moving to Awaiting Epic...');
         const data = await getSprintData(trelloContext);
-        const cardContext = trelloContext.getContext();
-        const card = await trelloContext.request('GET', `/1/cards/${cardContext.card}?fields=id,customFieldItems`);
+        const context = trelloContext.getContext();
+        const cardId = context.card;
+        const card = await trelloContext.request('GET', `/1/cards/${cardId}?fields=id,customFieldItems`);
 
         // Add estimate points to sprint total
         let pointsAdded = 0;
@@ -492,15 +503,13 @@ window.TrelloPowerUp.initialize({
         });
     },
     'authorization-status': function(t, options) {
-        return t.get('member', 'private', 'token')
-        .then(function(token) {
-            return { authorized: !!token };
-        });
+        // Always return authorized since we don't need external auth
+        return Promise.resolve({ authorized: true });
     },
     'show-authorization': function(t, options) {
+        // Show info that no authorization is needed
         return t.popup({
-            title: 'Authorize Sprint Tracker',
-            args: { apiKey: 'your-api-key-here' },
+            title: 'Sprint Tracker Authorization',
             url: './authorize.html',
             height: 300,
             width: 400
