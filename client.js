@@ -1,4 +1,4 @@
-// Sprint Tracker Trello Power-Up Client - Updated 2025-01-19 16:45
+// Sprint Tracker Trello Power-Up Client - Updated 2025-01-19 17:15 - Fixed InvalidField
 window.TrelloPowerUp = window.TrelloPowerUp || {};
 
 // Default values
@@ -110,17 +110,23 @@ async function moveToInProgress(trelloContext) {
         const data = await getSprintData(trelloContext);
         const branchName = `${data.sprint}-${data.branch}`;
 
-        // Get card information using official SDK syntax
+        // Get card information using basic fields only
         console.log('Getting card data...');
-        const card = await trelloContext.card('id', 'name', 'idList', 'idMembers');
+        const card = await trelloContext.card('id');
         console.log('Card retrieved:', card);
+
+        // Get additional card data separately
+        const cardList = await trelloContext.card('idList');
+        const cardMembers = await trelloContext.card('idMembers');
+        console.log('Card list:', cardList.idList);
+        console.log('Card members:', cardMembers.idMembers);
 
         // Get member information
         const member = await trelloContext.member('id');
         console.log('Member ID:', member.id);
 
         // Add member to card if not already on it
-        if (!card.idMembers.includes(member.id)) {
+        if (!cardMembers.idMembers.includes(member.id)) {
             await trelloContext.request('POST', `/1/cards/${card.id}/idMembers`, {
                 value: member.id
             });
@@ -133,7 +139,7 @@ async function moveToInProgress(trelloContext) {
             list.name.toLowerCase().includes('in progress')
         );
 
-        if (inProgressList && card.idList !== inProgressList.id) {
+        if (inProgressList && cardList.idList !== inProgressList.id) {
             await trelloContext.request('PUT', `/1/cards/${card.id}`, {
                 idList: inProgressList.id,
                 pos: 'top'
