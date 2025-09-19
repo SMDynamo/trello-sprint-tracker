@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sprint Tracker Settings</title>
+    <link rel="icon" type="image/x-icon" href="./favicon.ico">
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -111,8 +112,8 @@
             <input type="number" id="pointsDone" min="0" placeholder="Enter points done">
         </div>
 
-        <button class="button" onclick="saveSettings()">Save Settings</button>
-        <button class="button secondary" onclick="loadCurrentValues()">Reset to Current</button>
+        <button class="button" id="saveButton">Save Settings</button>
+        <button class="button secondary" id="resetButton">Reset to Current</button>
         
         <div id="message" style="margin-top: 15px; padding: 10px; display: none; border-radius: 4px;"></div>
     </div>
@@ -219,7 +220,13 @@
         }
 
         // Load current values when page loads
-        document.addEventListener('DOMContentLoaded', loadCurrentValues);
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCurrentValues();
+
+            // Add event listeners for buttons
+            document.getElementById('saveButton').addEventListener('click', saveSettings);
+            document.getElementById('resetButton').addEventListener('click', loadCurrentValues);
+        });
     </script>
 </body>
 </html>

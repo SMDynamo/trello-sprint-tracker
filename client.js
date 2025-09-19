@@ -279,8 +279,8 @@ async function getBoardBadge(t) {
                     title: 'Sprint Tracker',
                     text: `Sprint #${data.sprint} • Pts ${data.points}`,
                     icon: {
-                        dark: './icon-light.svg',
-                        light: './icon-dark.svg'
+                        dark: 'https://smdynamo.github.io/trello-sprint-tracker/icon-light.svg',
+                        light: 'https://smdynamo.github.io/trello-sprint-tracker/icon-dark.svg'
                     },
                     color: 'blue',
                     refresh: 10
@@ -321,8 +321,8 @@ window.TrelloPowerUp.initialize({
     'board-buttons': function(t, options) {
         return [{
             icon: {
-                dark: './icon-light.svg',
-                light: './icon-dark.svg'
+                dark: 'https://smdynamo.github.io/trello-sprint-tracker/icon-light.svg',
+                light: 'https://smdynamo.github.io/trello-sprint-tracker/icon-dark.svg'
             },
             text: 'Board Vars',
             callback: function(t) {
@@ -330,8 +330,8 @@ window.TrelloPowerUp.initialize({
             }
         }, {
             icon: {
-                dark: './icon-light.svg',
-                light: './icon-dark.svg'
+                dark: 'https://smdynamo.github.io/trello-sprint-tracker/icon-light.svg',
+                light: 'https://smdynamo.github.io/trello-sprint-tracker/icon-dark.svg'
             },
             text: 'New Sprint',
             callback: function(t) {
@@ -342,8 +342,8 @@ window.TrelloPowerUp.initialize({
     'card-buttons': function(t, options) {
         return [{
             icon: {
-                dark: './icon-light.svg',
-                light: './icon-dark.svg'
+                dark: 'https://smdynamo.github.io/trello-sprint-tracker/icon-light.svg',
+                light: 'https://smdynamo.github.io/trello-sprint-tracker/icon-dark.svg'
             }, 
             text: 'Use next branch #',
             callback: function(t) {
@@ -351,8 +351,8 @@ window.TrelloPowerUp.initialize({
             }
         }, {
             icon: {
-                dark: './icon-light.svg',
-                light: './icon-dark.svg'
+                dark: 'https://smdynamo.github.io/trello-sprint-tracker/icon-light.svg',
+                light: 'https://smdynamo.github.io/trello-sprint-tracker/icon-dark.svg'
             },
             text: 'Add estimate to sprint points',
             callback: function(t) {

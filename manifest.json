@@ -9,6 +9,6 @@
         "show-settings"
     ],
     "connectorUrl": "https://smdynamo.github.io/trello-sprint-tracker/",
-    "iconUrl": "./icon-light.svg",
+    "iconUrl": "https://smdynamo.github.io/trello-sprint-tracker/icon-light.svg",
     "tags": ["productivity", "agile", "sprint", "branch", "tracking"]
 }
