@@ -134,18 +134,12 @@ async function moveToInProgress(trelloContext) {
         data.branch += 1;
         await saveSprintData(trelloContext, data);
 
-        // Copy branch to clipboard
-        if (navigator.clipboard) {
-            try {
-                await navigator.clipboard.writeText(branchName);
-            } catch (err) {
-                console.log('Could not copy to clipboard');
-            }
-        }
+        // Branch name is set in custom field above - no clipboard needed
+        console.log('Branch name set in custom field:', branchName);
 
         return trelloContext.alert({
-            message: `✅ Generated: Branch ${branchName}, Sprint ${data.sprint}, copied to clipboard!\n\nTo complete: Manually join card, move to In Progress, set custom fields`,
-            duration: 8
+            message: `✅ Automated: Set custom fields - Branch: ${branchName}, Sprint: ${data.sprint}, Start Date set!`,
+            duration: 6
         });
 
     } catch (error) {
