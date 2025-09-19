@@ -55,13 +55,20 @@ async function updateCardCustomField(trelloContext, fieldName, value) {
             return false;
         }
 
-        // Find the field by name (case-insensitive)
-        const field = board.customFields.find(f =>
-            f.name && f.name.toLowerCase() === fieldName.toLowerCase()
+        // Find the field by name (case-sensitive first, then case-insensitive)
+        let field = board.customFields.find(f =>
+            f.name && f.name === fieldName
         );
 
         if (!field) {
-            console.log(`Custom field "${fieldName}" not found on board`);
+            field = board.customFields.find(f =>
+                f.name && f.name.toLowerCase() === fieldName.toLowerCase()
+            );
+        }
+
+        if (!field) {
+            console.log(`Custom field "${fieldName}" not found. Available fields:`,
+                board.customFields.map(f => f.name).join(', '));
             return false;
         }
 
@@ -74,9 +81,11 @@ async function updateCardCustomField(trelloContext, fieldName, value) {
             updateData = { number: String(value) };
         } else if (field.type === 'text') {
             updateData = { text: String(value) };
+        } else if (field.type === 'date') {
+            updateData = { date: String(value) };
         } else {
-            console.log(`Unsupported field type: ${field.type}`);
-            return false;
+            console.log(`Field "${fieldName}" has type "${field.type}" - attempting text update`);
+            updateData = { text: String(value) };
         }
 
         // Make the API call to update the custom field
@@ -86,7 +95,7 @@ async function updateCardCustomField(trelloContext, fieldName, value) {
             data: { value: updateData }
         });
 
-        console.log(`Updated ${fieldName} to ${value}`);
+        console.log(`Updated ${fieldName} (${field.type}) to ${value}`);
         return true;
     } catch (error) {
         console.error(`Error updating custom field ${fieldName}:`, error);
@@ -182,12 +191,15 @@ async function moveToInProgress(trelloContext) {
             console.log('Start Date field not found or not updated');
         }
 
-        // 4. Set Branch custom field
-        const branchSet = await updateCardCustomField(trelloContext, 'Branch', branchName);
+        // 4. Set Branch custom field (try both "Branch" and "Feature Branch")
+        let branchSet = await updateCardCustomField(trelloContext, 'Branch', branchName);
+        if (!branchSet) {
+            branchSet = await updateCardCustomField(trelloContext, 'Feature Branch', branchName);
+        }
         if (branchSet) {
             successMessages.push(`Branch: ${branchName}`);
         } else {
-            errorMessages.push('Branch field not found');
+            errorMessages.push('Branch/Feature Branch field not found');
         }
 
         // 5. Set Sprint custom field
