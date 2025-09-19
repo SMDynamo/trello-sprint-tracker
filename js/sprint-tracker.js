@@ -22,8 +22,8 @@ window.TrelloPowerUp.initialize({
     'board-buttons': function(t, options) {
         return [{
             icon: {
-                dark: './icon-light.svg',
-                light: './icon-dark.svg'
+                dark: 'https://smdynamo.github.io/trello-sprint-tracker/icon-light.svg',
+                light: 'https://smdynamo.github.io/trello-sprint-tracker/icon-dark.svg'
             },
             text: 'Start New Sprint',
             callback: function(t) {
@@ -34,8 +34,8 @@ window.TrelloPowerUp.initialize({
     'card-buttons': function(t, options) {
         return [{
             icon: {
-                dark: './icon-light.svg',
-                light: './icon-dark.svg'
+                dark: 'https://smdynamo.github.io/trello-sprint-tracker/icon-light.svg',
+                light: 'https://smdynamo.github.io/trello-sprint-tracker/icon-dark.svg'
             }, 
             text: 'Create Branch',
             callback: function(t) {
@@ -43,8 +43,8 @@ window.TrelloPowerUp.initialize({
             }
         }, {
             icon: {
-                dark: './icon-light.svg',
-                light: './icon-dark.svg'
+                dark: 'https://smdynamo.github.io/trello-sprint-tracker/icon-light.svg',
+                light: 'https://smdynamo.github.io/trello-sprint-tracker/icon-dark.svg'
             },
             text: 'Add estimate to sprint',
             callback: function(t) {
@@ -58,7 +58,7 @@ window.TrelloPowerUp.initialize({
     'show-settings': function(t, options) {
         return t.popup({
             title: 'Sprint Tracker Settings',
-            url: './settings.html',
+            url: 'https://smdynamo.github.io/trello-sprint-tracker/settings.html',
             height: 400
         });
     },
