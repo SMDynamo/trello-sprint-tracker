@@ -707,6 +707,114 @@ function showBoardVars(t) {
     });
 }
 
+// Show sprint summary
+async function showSprintSummary(t) {
+    try {
+        const data = await getSprintData(t);
+
+        // Get all boards to search for completed cards
+        const boards = await t.request({
+            method: 'GET',
+            url: `/1/members/me/boards`
+        });
+
+        const devDoneBoard = boards.find(board =>
+            board.name.includes('Dev Done')
+        );
+
+        if (!devDoneBoard) {
+            return t.alert({
+                message: 'Could not find "Dev Done" board to check completed cards',
+                duration: 3
+            });
+        }
+
+        // Get all cards from Dev Done board with custom fields
+        const cards = await t.request({
+            method: 'GET',
+            url: `/1/boards/${devDoneBoard.id}/cards`,
+            data: {
+                customFieldItems: 'true'
+            }
+        });
+
+        // Get custom field definitions
+        const customFields = await t.request({
+            method: 'GET',
+            url: `/1/boards/${devDoneBoard.id}/customFields`
+        });
+
+        const sprintField = customFields.find(field =>
+            field.name && field.name.toLowerCase() === 'sprint'
+        );
+
+        const estimateField = customFields.find(field =>
+            field.name && field.name.toLowerCase() === 'estimate' && field.type === 'number'
+        );
+
+        // Filter cards for current sprint
+        const currentSprintCards = [];
+        let totalPoints = 0;
+
+        for (const card of cards) {
+            if (card.customFieldItems && sprintField) {
+                const sprintItem = card.customFieldItems.find(item =>
+                    item.idCustomField === sprintField.id
+                );
+
+                if (sprintItem && sprintItem.value) {
+                    const cardSprint = sprintItem.value.number || sprintItem.value.text;
+                    if (String(cardSprint) === String(data.sprint)) {
+                        // Get estimate for this card
+                        let estimate = 0;
+                        if (estimateField) {
+                            const estimateItem = card.customFieldItems.find(item =>
+                                item.idCustomField === estimateField.id
+                            );
+                            if (estimateItem && estimateItem.value && estimateItem.value.number) {
+                                estimate = parseFloat(estimateItem.value.number);
+                                totalPoints += estimate;
+                            }
+                        }
+
+                        currentSprintCards.push({
+                            name: card.name,
+                            estimate: estimate,
+                            url: card.shortUrl
+                        });
+                    }
+                }
+            }
+        }
+
+        // Sort cards by estimate (highest first)
+        currentSprintCards.sort((a, b) => b.estimate - a.estimate);
+
+        // Create HTML content for popup
+        const items = currentSprintCards.map(card =>
+            `• ${card.name} ${card.estimate > 0 ? `(${card.estimate} pts)` : ''}`
+        ).join('\n');
+
+        const message = currentSprintCards.length > 0
+            ? `Sprint ${data.sprint} Completed Cards:\n\n${items}\n\nTotal: ${totalPoints} points`
+            : `No completed cards found for Sprint ${data.sprint}`;
+
+        // Show in a popup or alert (alert for now since it's simpler)
+        return t.alert({
+            message: message,
+            duration: 10,
+            display: 'info'
+        });
+
+    } catch (error) {
+        console.error('Error showing sprint summary:', error);
+        return t.alert({
+            message: 'Error loading sprint summary',
+            duration: 3
+        });
+    }
+}
+
 // Initialize the Power-Up
 window.TrelloPowerUp.initialize({
     'board-buttons': function(t, options) {
@@ -721,6 +829,12 @@ window.TrelloPowerUp.initialize({
             text: '🚀 New Sprint',
             callback: function(t) {
                 return startNewSprint(t);
+            }
+        }, {
+            icon: 'https://img.icons8.com/ios/50/000000/list.png',
+            text: '📋 Sprint Summary',
+            callback: function(t) {
+                return showSprintSummary(t);
             }
         }];
     },
