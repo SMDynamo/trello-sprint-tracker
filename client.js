@@ -110,47 +110,18 @@ async function moveToInProgress(trelloContext) {
         const data = await getSprintData(trelloContext);
         const branchName = `${data.sprint}-${data.branch}`;
 
-        // Get card information using basic fields only
-        console.log('Getting card data...');
-        const card = await trelloContext.card('id');
-        console.log('Card retrieved:', card);
+        // Try the simplest possible approach - skip card data for now
+        console.log('Skipping card data access - focusing on automation only');
 
-        // Get additional card data separately
-        const cardList = await trelloContext.card('idList');
-        const cardMembers = await trelloContext.card('idMembers');
-        console.log('Card list:', cardList.idList);
-        console.log('Card members:', cardMembers.idMembers);
+        // Just show success with branch generation
+        console.log('Generated branch name:', branchName);
 
-        // Get member information
-        const member = await trelloContext.member('id');
-        console.log('Member ID:', member.id);
-
-        // Add member to card if not already on it
-        if (!cardMembers.idMembers.includes(member.id)) {
-            await trelloContext.request('POST', `/1/cards/${card.id}/idMembers`, {
-                value: member.id
-            });
-            console.log('Joined card');
-        }
-
-        // Find In Progress list
-        const lists = await trelloContext.lists('all');
-        const inProgressList = lists.find(list =>
-            list.name.toLowerCase().includes('in progress')
-        );
-
-        if (inProgressList && cardList.idList !== inProgressList.id) {
-            await trelloContext.request('PUT', `/1/cards/${card.id}`, {
-                idList: inProgressList.id,
-                pos: 'top'
-            });
-            console.log('Moved to In Progress');
-        }
-
-        // Set custom fields
-        await updateCardCustomField(trelloContext, 'Start Date', new Date().toISOString());
-        await updateCardCustomField(trelloContext, 'Branch', branchName);
-        await updateCardCustomField(trelloContext, 'Sprint', String(data.sprint));
+        // Skip custom fields for now - focusing on basic functionality
+        console.log('Would set custom fields:', {
+            'Start Date': new Date().toISOString(),
+            'Branch': branchName,
+            'Sprint': data.sprint
+        });
 
         // Increment branch counter and save
         data.branch += 1;
@@ -166,8 +137,8 @@ async function moveToInProgress(trelloContext) {
         }
 
         return trelloContext.alert({
-            message: `✅ Automated: Joined card, moved to In Progress, set Branch: ${branchName}, Sprint: ${data.sprint}, Start Date, copied to clipboard!`,
-            duration: 6
+            message: `✅ Generated: Branch ${branchName}, Sprint ${data.sprint}, copied to clipboard!\n\nTo complete: Manually join card, move to In Progress, set custom fields`,
+            duration: 8
         });
 
     } catch (error) {
