@@ -166,10 +166,10 @@ async function moveToInProgress(trelloContext) {
         await updateCardCustomField(trelloContext, 'Start Date', new Date().toISOString());
 
         // 4. Set Branch custom field
-        await updateCardCustomField(trelloContext, 'branch', branchName);
+        await updateCardCustomField(trelloContext, 'Branch', branchName);
 
         // 5. Set Sprint custom field
-        await updateCardCustomField(trelloContext, 'sprint', data.sprint);
+        await updateCardCustomField(trelloContext, 'Sprint', data.sprint);
 
         // 6. Increment branch counter for next use
         data.branch += 1;
@@ -438,75 +438,6 @@ async function moveToAwaitingEpic(trelloContext) {
             message: 'Error: ' + error.message,
             duration: 4
         });
-    }
-}
-
-// Create a new branch and set it on the card
-async function createBranch(trelloContext) {
-    try {
-        const data = await getSprintData(trelloContext);
-        const branchName = `${data.sprint}-${data.branch}`;
-
-        // Update the branch custom field on this card
-        await updateCardCustomField(trelloContext, 'branch', branchName);
-
-        // Also update sprint field since card is moving to in progress
-        await updateCardCustomField(trelloContext, 'sprint', data.sprint);
-
-        // Increment branch counter for next use
-        data.branch += 1;
-
-        // Save updated data
-        const saved = await saveSprintData(trelloContext, data);
-
-        if (saved) {
-            // Copy branch name to clipboard if possible
-            let copied = false;
-            if (navigator.clipboard) {
-                try {
-                    await navigator.clipboard.writeText(branchName);
-                    console.log('Branch name copied to clipboard');
-                    copied = true;
-                } catch (clipboardError) {
-                    console.log('Could not copy to clipboard:', clipboardError);
-                }
-            }
-
-            // Attach branch info to the card
-            try {
-                await trelloContext.attach({
-                    name: `Branch: ${branchName}`,
-                    url: `#branch-${branchName}`
-                });
-            } catch (attachError) {
-                console.warn('Could not attach branch to card:', attachError);
-                // Continue execution even if attachment fails
-            }
-
-            // Show success message
-            const message = copied
-                ? `Branch ${branchName} created and copied to clipboard!`
-                : `Branch ${branchName} created and attached to card!`;
-
-            return trelloContext.alert({
-                message: message,
-                duration: 5
-            });
-        } else {
-            return trelloContext.alert({
-                message: 'Error creating branch. Please try again.',
-                duration: 3
-            });
-        }
-
-    } catch (error) {
-        console.error('Error in createBranch:', error);
-        if (trelloContext && trelloContext.alert) {
-            return trelloContext.alert({
-                message: 'Error creating branch. Please check console for details.',
-                duration: 3
-            });
-        }
     }
 }
 
@@ -862,12 +793,6 @@ window.TrelloPowerUp.initialize({
             text: '⏳ Awaiting Epic',
             callback: function(t) {
                 return moveToAwaitingEpic(t);
-            }
-        }, {
-            icon: 'https://img.icons8.com/ios/50/000000/code-fork.png',
-            text: '🌿 Use next branch #',
-            callback: function(t) {
-                return createBranch(t);
             }
         }];
     },
