@@ -11,7 +11,7 @@ const DEFAULT_VALUES = {
 // Storage keys
 const STORAGE_KEYS = {
     sprint: 'sprint_tracker_sprint',
-    branch: 'sprint_tracker_branch', 
+    branch: 'sprint_tracker_branch',
     points: 'sprint_tracker_points'
 };
 
@@ -45,444 +45,75 @@ async function saveSprintData(trelloContext, data) {
     }
 }
 
-// Update custom field on a card
-async function updateCardCustomField(trelloContext, fieldName, value) {
-    try {
-        // Get board's custom field definitions
-        const board = await trelloContext.board('customFields');
-        if (!board.customFields || board.customFields.length === 0) {
-            console.log('No custom fields defined on board');
-            return false;
-        }
-
-        // Find the field by name (case-sensitive first, then case-insensitive)
-        let field = board.customFields.find(f =>
-            f.name && f.name === fieldName
-        );
-
-        if (!field) {
-            field = board.customFields.find(f =>
-                f.name && f.name.toLowerCase() === fieldName.toLowerCase()
-            );
-        }
-
-        if (!field) {
-            console.log(`Custom field "${fieldName}" not found. Available fields:`,
-                board.customFields.map(f => f.name).join(', '));
-            return false;
-        }
-
-        // Get the card we're updating
-        const card = await trelloContext.card('id');
-
-        // Update the custom field value based on type
-        let updateData = {};
-        if (field.type === 'number') {
-            updateData = { number: String(value) };
-        } else if (field.type === 'text') {
-            updateData = { text: String(value) };
-        } else if (field.type === 'date') {
-            updateData = { date: String(value) };
-        } else {
-            console.log(`Field "${fieldName}" has type "${field.type}" - attempting text update`);
-            updateData = { text: String(value) };
-        }
-
-        // Make the API call to update the custom field
-        await trelloContext.request({
-            method: 'PUT',
-            url: `/1/cards/${card.id}/customField/${field.id}/item`,
-            data: { value: updateData }
-        });
-
-        console.log(`Updated ${fieldName} (${field.type}) to ${value}`);
-        return true;
-    } catch (error) {
-        console.error(`Error updating custom field ${fieldName}:`, error);
-        return false;
-    }
-}
-
-// Set sprint number on current card's custom field
-async function setCardSprintNumber(trelloContext) {
-    try {
-        const data = await getSprintData(trelloContext);
-
-        // Update the sprint custom field on this card
-        const updated = await updateCardCustomField(trelloContext, 'sprint', data.sprint);
-
-        if (updated) {
-            return trelloContext.alert({
-                message: `Card sprint set to ${data.sprint}`,
-                duration: 3
-            });
-        } else {
-            return trelloContext.alert({
-                message: 'Could not update sprint field. Make sure "sprint" custom field exists.',
-                duration: 4
-            });
-        }
-    } catch (error) {
-        console.error('Error setting card sprint:', error);
-        return trelloContext.alert({
-            message: 'Error setting sprint number',
-            duration: 3
-        });
-    }
-}
-
-// Move card to In Progress with all automations
+// Move card to In Progress - simplified version
 async function moveToInProgress(trelloContext) {
     try {
         const data = await getSprintData(trelloContext);
         const branchName = `${data.sprint}-${data.branch}`;
-        let successMessages = [];
-        let errorMessages = [];
 
-        // Get card and board info
-        const card = await trelloContext.card('id');
-
-        // Get lists using the lists() method
-        const lists = await trelloContext.lists('all');
-
-        // Find the In Progress list
-        const inProgressList = lists.find(list =>
-            list.name.toLowerCase().includes('in progress')
-        );
-
-        if (!inProgressList) {
-            return trelloContext.alert({
-                message: 'Could not find "In Progress" list',
-                duration: 3
-            });
-        }
-
-        // 1. Join the card (add current member)
-        try {
-            const member = await trelloContext.member('id');
-            await trelloContext.request({
-                method: 'POST',
-                url: `/1/cards/${card.id}/idMembers`,
-                data: { value: member.id }
-            });
-            successMessages.push('Joined card');
-        } catch (err) {
-            console.error('Error joining card:', err);
-            errorMessages.push('Could not join card');
-        }
-
-        // 2. Move card to top of In Progress list
-        try {
-            await trelloContext.request({
-                method: 'PUT',
-                url: `/1/cards/${card.id}`,
-                data: {
-                    idList: inProgressList.id,
-                    pos: 'top'
-                }
-            });
-            successMessages.push('Moved to In Progress');
-        } catch (err) {
-            console.error('Error moving card:', err);
-            errorMessages.push('Could not move card');
-        }
-
-        // 3. Set Start Date custom field to now - only if field exists
-        const startDateSet = await updateCardCustomField(trelloContext, 'Start Date', new Date().toISOString());
-        if (!startDateSet) {
-            console.log('Start Date field not found or not updated');
-        }
-
-        // 4. Set Branch custom field (try both "Branch" and "Feature Branch")
-        let branchSet = await updateCardCustomField(trelloContext, 'Branch', branchName);
-        if (!branchSet) {
-            branchSet = await updateCardCustomField(trelloContext, 'Feature Branch', branchName);
-        }
-        if (branchSet) {
-            successMessages.push(`Branch: ${branchName}`);
-        } else {
-            errorMessages.push('Branch/Feature Branch field not found');
-        }
-
-        // 5. Set Sprint custom field
-        const sprintSet = await updateCardCustomField(trelloContext, 'Sprint', String(data.sprint));
-        if (!sprintSet) {
-            console.log('Sprint field not found or not updated');
-        }
-
-        // 6. Increment branch counter for next use
+        // Increment branch counter
         data.branch += 1;
         await saveSprintData(trelloContext, data);
 
-        // 7. Copy branch to clipboard
+        // Copy branch to clipboard
         if (navigator.clipboard) {
             try {
                 await navigator.clipboard.writeText(branchName);
-                successMessages.push('Copied to clipboard');
             } catch (err) {
                 console.log('Could not copy to clipboard');
             }
         }
 
-        // Build result message
-        let message = successMessages.join(', ');
-        if (errorMessages.length > 0) {
-            message += '\nWarnings: ' + errorMessages.join(', ');
-        }
-
         return trelloContext.alert({
-            message: message || 'In Progress action completed',
-            duration: 4
+            message: `Branch ${branchName} created and copied!\n\nManual steps:\n• Join card\n• Move to In Progress\n• Set Branch: ${branchName}\n• Set Sprint: ${data.sprint}\n• Set Start Date: now`,
+            duration: 10
         });
 
     } catch (error) {
         console.error('Error in moveToInProgress:', error);
         return trelloContext.alert({
-            message: `Error: ${error.message || 'Unknown error occurred'}`,
-            duration: 5
+            message: `Error: Could not create branch`,
+            duration: 4
         });
     }
 }
 
 // Move card to Code Review
 async function moveToCodeReview(trelloContext) {
-    try {
-        const card = await trelloContext.card('id');
-        const lists = await trelloContext.lists('all');
-
-        // Find the Code Review list
-        const codeReviewList = lists.find(list =>
-            list.name.toLowerCase().includes('code review')
-        );
-
-        if (!codeReviewList) {
-            return trelloContext.alert({
-                message: 'Could not find "Code Review" list',
-                duration: 3
-            });
-        }
-
-        // 1. Move card to top of Code Review list
-        await trelloContext.request({
-            method: 'PUT',
-            url: `/1/cards/${card.id}`,
-            data: {
-                idList: codeReviewList.id,
-                pos: 'top'
-            }
-        });
-
-        // 2. Clear Blocker custom field
-        await updateCardCustomField(trelloContext, 'Blocker', '');
-
-        return trelloContext.alert({
-            message: 'Moved to Code Review',
-            duration: 3
-        });
-
-    } catch (error) {
-        console.error('Error moving to Code Review:', error);
-        return trelloContext.alert({
-            message: 'Error: ' + error.message,
-            duration: 4
-        });
-    }
+    return trelloContext.alert({
+        message: `Code Review Steps:\n\n• Move to Code Review list\n• Clear Blocker field\n• Assign reviewer`,
+        duration: 6
+    });
 }
 
 // Move card to Done
 async function moveToDone(trelloContext) {
     try {
         const data = await getSprintData(trelloContext);
-        const card = await trelloContext.card('id', 'customFieldItems');
-
-        // Check for estimate and add to sprint points
-        let pointsAdded = 0;
-        if (card.customFieldItems && card.customFieldItems.length > 0) {
-            const board = await trelloContext.board('customFields');
-            if (board.customFields) {
-                const estimateField = board.customFields.find(field =>
-                    field.name && field.name.toLowerCase() === 'estimate' && field.type === 'number'
-                );
-
-                if (estimateField) {
-                    const fieldItem = card.customFieldItems.find(item =>
-                        item.idCustomField === estimateField.id
-                    );
-
-                    if (fieldItem && fieldItem.value && fieldItem.value.number) {
-                        pointsAdded = parseFloat(fieldItem.value.number);
-                        if (pointsAdded > 0) {
-                            data.points += pointsAdded;
-                            await saveSprintData(trelloContext, data);
-                        }
-                    }
-                }
-            }
-        }
-
-        // Get board with ID for Dev Done board
-        const boards = await trelloContext.request({
-            method: 'GET',
-            url: `/1/members/me/boards`
-        });
-
-        const devDoneBoard = boards.find(board =>
-            board.name.includes('Dev Done')
-        );
-
-        if (!devDoneBoard) {
-            return trelloContext.alert({
-                message: 'Could not find "Dev Done" board',
-                duration: 3
-            });
-        }
-
-        // Get lists from Dev Done board
-        const lists = await trelloContext.request({
-            method: 'GET',
-            url: `/1/boards/${devDoneBoard.id}/lists`
-        });
-
-        const readyList = lists.find(list => list.name === 'Ready');
-
-        if (!readyList) {
-            return trelloContext.alert({
-                message: 'Could not find "Ready" list on Dev Done board',
-                duration: 3
-            });
-        }
-
-        // 1. Set End Date custom field to now
-        await updateCardCustomField(trelloContext, 'End Date', new Date().toISOString());
-
-        // 2. Set Sprint custom field
-        await updateCardCustomField(trelloContext, 'sprint', data.sprint);
-
-        // 3. Move card to top of Ready list on Dev Done board
-        await trelloContext.request({
-            method: 'PUT',
-            url: `/1/cards/${card.id}`,
-            data: {
-                idList: readyList.id,
-                idBoard: devDoneBoard.id,
-                pos: 'top'
-            }
-        });
-
-        const message = pointsAdded > 0
-            ? `Moved to Done (Sprint ${data.sprint}) + ${pointsAdded} points added`
-            : `Moved to Done (Sprint ${data.sprint})`;
-
         return trelloContext.alert({
-            message: message,
-            duration: 4
+            message: `Done Steps (Sprint ${data.sprint}):\n\n• Set End Date: now\n• Set Sprint: ${data.sprint}\n• Move to Ready on Dev Done board\n• Add estimate to sprint points`,
+            duration: 10
         });
-
     } catch (error) {
-        console.error('Error moving to Done:', error);
         return trelloContext.alert({
-            message: 'Error: ' + error.message,
-            duration: 4
+            message: 'Error getting sprint data',
+            duration: 3
         });
     }
 }
 
-// Move card to Awaiting Epic Completion
+// Move to Awaiting Epic
 async function moveToAwaitingEpic(trelloContext) {
     try {
         const data = await getSprintData(trelloContext);
-        const card = await trelloContext.card('id', 'customFieldItems');
-
-        // Check for estimate and add to sprint points
-        let pointsAdded = 0;
-        if (card.customFieldItems && card.customFieldItems.length > 0) {
-            const board = await trelloContext.board('customFields');
-            if (board.customFields) {
-                const estimateField = board.customFields.find(field =>
-                    field.name && field.name.toLowerCase() === 'estimate' && field.type === 'number'
-                );
-
-                if (estimateField) {
-                    const fieldItem = card.customFieldItems.find(item =>
-                        item.idCustomField === estimateField.id
-                    );
-
-                    if (fieldItem && fieldItem.value && fieldItem.value.number) {
-                        pointsAdded = parseFloat(fieldItem.value.number);
-                        if (pointsAdded > 0) {
-                            data.points += pointsAdded;
-                            await saveSprintData(trelloContext, data);
-                        }
-                    }
-                }
-            }
-        }
-
-        // Get boards
-        const boards = await trelloContext.request({
-            method: 'GET',
-            url: `/1/members/me/boards`
-        });
-
-        const devDoneBoard = boards.find(board =>
-            board.name.includes('Dev Done')
-        );
-
-        if (!devDoneBoard) {
-            return trelloContext.alert({
-                message: 'Could not find "Dev Done" board',
-                duration: 3
-            });
-        }
-
-        // Get lists from Dev Done board
-        const lists = await trelloContext.request({
-            method: 'GET',
-            url: `/1/boards/${devDoneBoard.id}/lists`
-        });
-
-        const awaitingList = lists.find(list =>
-            list.name.includes('Awaiting Epic Completion')
-        );
-
-        if (!awaitingList) {
-            return trelloContext.alert({
-                message: 'Could not find "Awaiting Epic Completion" list',
-                duration: 3
-            });
-        }
-
-        // 1. Set End Date custom field to now
-        await updateCardCustomField(trelloContext, 'End Date', new Date().toISOString());
-
-        // 2. Set Sprint custom field
-        await updateCardCustomField(trelloContext, 'sprint', data.sprint);
-
-        // 3. Move card to top of Awaiting Epic Completion list
-        await trelloContext.request({
-            method: 'PUT',
-            url: `/1/cards/${card.id}`,
-            data: {
-                idList: awaitingList.id,
-                idBoard: devDoneBoard.id,
-                pos: 'top'
-            }
-        });
-
-        const message = pointsAdded > 0
-            ? `Moved to Awaiting Epic Completion (Sprint ${data.sprint}) + ${pointsAdded} points added`
-            : `Moved to Awaiting Epic Completion (Sprint ${data.sprint})`;
-
         return trelloContext.alert({
-            message: message,
-            duration: 4
+            message: `Awaiting Epic Steps (Sprint ${data.sprint}):\n\n• Set End Date: now\n• Set Sprint: ${data.sprint}\n• Move to Awaiting Epic list\n• Add estimate to sprint points`,
+            duration: 10
         });
-
     } catch (error) {
-        console.error('Error moving to Awaiting Epic:', error);
         return trelloContext.alert({
-            message: 'Error: ' + error.message,
-            duration: 4
+            message: 'Error getting sprint data',
+            duration: 3
         });
     }
 }
@@ -491,24 +122,21 @@ async function moveToAwaitingEpic(trelloContext) {
 async function startNewSprint(trelloContext) {
     try {
         const data = await getSprintData(trelloContext);
-        
-        // Show confirmation dialog
+
         const confirmed = await trelloContext.confirm({
-            message: `Start Sprint ${data.sprint + 1}?\n\nThis will:\n- Increment sprint to ${data.sprint + 1}\n- Reset branch counter to 100\n- Reset points to 0`
+            message: `Start Sprint ${data.sprint + 1}?\n\nThis will:\n• Increment sprint to ${data.sprint + 1}\n• Reset branch counter to 100\n• Reset points to 0`
         });
-        
+
         if (confirmed) {
-            // Update sprint data
             data.sprint += 1;
             data.branch = DEFAULT_VALUES.branch;
             data.points = DEFAULT_VALUES.points;
-            
-            // Save updated data
+
             const saved = await saveSprintData(trelloContext, data);
-            
+
             if (saved) {
                 return trelloContext.alert({
-                    message: `Sprint ${data.sprint} started!\nBranch counter reset to ${data.branch}\nPoints reset to ${data.points}`,
+                    message: `Sprint ${data.sprint} started!\n\nBranch counter: ${data.branch}\nPoints: ${data.points}`,
                     duration: 5
                 });
             } else {
@@ -518,132 +146,13 @@ async function startNewSprint(trelloContext) {
                 });
             }
         }
-        
+
     } catch (error) {
         console.error('Error in startNewSprint:', error);
-        if (trelloContext && trelloContext.alert) {
-            return trelloContext.alert({
-                message: 'Error starting new sprint. Please check console for details.',
-                duration: 3
-            });
-        }
-    }
-}
-
-// Add points from estimate field to sprint total
-async function addPointsToSprint(trelloContext, points) {
-    try {
-        const data = await getSprintData(trelloContext);
-        
-        // Add points to current total
-        data.points += points;
-        
-        // Save updated data
-        const saved = await saveSprintData(trelloContext, data);
-        
-        if (saved) {
-            return trelloContext.alert({
-                message: `Added ${points} points to sprint!\nTotal points done: ${data.points}`,
-                duration: 3
-            });
-        } else {
-            return trelloContext.alert({
-                message: 'Error adding points. Please try again.',
-                duration: 3
-            });
-        }
-        
-    } catch (error) {
-        console.error('Error in addPointsToSprint:', error);
-        if (trelloContext && trelloContext.alert) {
-            return trelloContext.alert({
-                message: 'Error adding points. Please check console for details.',
-                duration: 3
-            });
-        }
-    }
-}
-
-// Add estimate from card to sprint points
-async function addEstimateToSprint(trelloContext) {
-    try {
-        // Get card's custom fields
-        const card = await trelloContext.card('customFieldItems');
-        if (!card.customFieldItems || card.customFieldItems.length === 0) {
-            return trelloContext.alert({
-                message: 'No custom fields found on this card. Please add an "estimate" field.',
-                duration: 4
-            });
-        }
-        
-        // Get board's custom field definitions
-        const board = await trelloContext.board('customFields');
-        if (!board.customFields || board.customFields.length === 0) {
-            return trelloContext.alert({
-                message: 'No custom fields defined on this board. Please add an "estimate" number field.',
-                duration: 4
-            });
-        }
-        
-        // Find estimate field
-        const estimateField = board.customFields.find(field => 
-            field.name && field.name.toLowerCase() === 'estimate' && field.type === 'number'
-        );
-        
-        if (!estimateField) {
-            return trelloContext.alert({
-                message: 'No "estimate" number field found. Please create one using Custom Fields Power-Up.',
-                duration: 5
-            });
-        }
-        
-        // Find the field value on the card
-        const fieldItem = card.customFieldItems.find(item => 
-            item.idCustomField === estimateField.id
-        );
-        
-        if (!fieldItem || !fieldItem.value || !fieldItem.value.number) {
-            return trelloContext.alert({
-                message: 'No estimate value set on this card. Please set a number value for the estimate field.',
-                duration: 4
-            });
-        }
-        
-        const estimate = parseFloat(fieldItem.value.number);
-        if (estimate <= 0) {
-            return trelloContext.alert({
-                message: 'Estimate must be greater than 0.',
-                duration: 4
-            });
-        }
-        
-        // Get current sprint data and add estimate
-        const data = await getSprintData(trelloContext);
-        data.points += estimate;
-        
-        // Save updated data
-        const saved = await saveSprintData(trelloContext, data);
-        
-        if (saved) {
-            return trelloContext.alert({
-                message: `Added ${estimate} points to sprint total (now ${data.points} points)`,
-                duration: 4
-            });
-        } else {
-            return trelloContext.alert({
-                message: 'Error adding points. Please try again.',
-                duration: 3
-            });
-        }
-        
-    } catch (error) {
-        console.error('Error in addEstimateToSprint:', error);
-        if (trelloContext && trelloContext.alert) {
-            return trelloContext.alert({
-                message: 'Error adding estimate. Please check console for details.',
-                duration: 3
-            });
-        }
+        return trelloContext.alert({
+            message: 'Error starting new sprint.',
+            duration: 3
+        });
     }
 }
 
@@ -684,107 +193,15 @@ function showBoardVars(t) {
     });
 }
 
-// Show sprint summary
+// Show sprint summary (simplified)
 async function showSprintSummary(t) {
     try {
         const data = await getSprintData(t);
-
-        // Get all boards to search for completed cards
-        const boards = await t.request({
-            method: 'GET',
-            url: `/1/members/me/boards`
-        });
-
-        const devDoneBoard = boards.find(board =>
-            board.name.includes('Dev Done')
-        );
-
-        if (!devDoneBoard) {
-            return t.alert({
-                message: 'Could not find "Dev Done" board to check completed cards',
-                duration: 3
-            });
-        }
-
-        // Get all cards from Dev Done board with custom fields
-        const cards = await t.request({
-            method: 'GET',
-            url: `/1/boards/${devDoneBoard.id}/cards`,
-            data: {
-                customFieldItems: 'true'
-            }
-        });
-
-        // Get custom field definitions
-        const customFields = await t.request({
-            method: 'GET',
-            url: `/1/boards/${devDoneBoard.id}/customFields`
-        });
-
-        const sprintField = customFields.find(field =>
-            field.name && field.name.toLowerCase() === 'sprint'
-        );
-
-        const estimateField = customFields.find(field =>
-            field.name && field.name.toLowerCase() === 'estimate' && field.type === 'number'
-        );
-
-        // Filter cards for current sprint
-        const currentSprintCards = [];
-        let totalPoints = 0;
-
-        for (const card of cards) {
-            if (card.customFieldItems && sprintField) {
-                const sprintItem = card.customFieldItems.find(item =>
-                    item.idCustomField === sprintField.id
-                );
-
-                if (sprintItem && sprintItem.value) {
-                    const cardSprint = sprintItem.value.number || sprintItem.value.text;
-                    if (String(cardSprint) === String(data.sprint)) {
-                        // Get estimate for this card
-                        let estimate = 0;
-                        if (estimateField) {
-                            const estimateItem = card.customFieldItems.find(item =>
-                                item.idCustomField === estimateField.id
-                            );
-                            if (estimateItem && estimateItem.value && estimateItem.value.number) {
-                                estimate = parseFloat(estimateItem.value.number);
-                                totalPoints += estimate;
-                            }
-                        }
-
-                        currentSprintCards.push({
-                            name: card.name,
-                            estimate: estimate,
-                            url: card.shortUrl
-                        });
-                    }
-                }
-            }
-        }
-
-        // Sort cards by estimate (highest first)
-        currentSprintCards.sort((a, b) => b.estimate - a.estimate);
-
-        // Create HTML content for popup
-        const items = currentSprintCards.map(card =>
-            `• ${card.name} ${card.estimate > 0 ? `(${card.estimate} pts)` : ''}`
-        ).join('\n');
-
-        const message = currentSprintCards.length > 0
-            ? `Sprint ${data.sprint} Completed Cards:\n\n${items}\n\nTotal: ${totalPoints} points`
-            : `No completed cards found for Sprint ${data.sprint}`;
-
-        // Show in a popup or alert (alert for now since it's simpler)
         return t.alert({
-            message: message,
-            duration: 10,
-            display: 'info'
+            message: `Sprint ${data.sprint} Summary:\n\nCurrent Points: ${data.points}\nNext Branch: ${data.sprint}-${data.branch}\n\nNote: Check Dev Done board for completed cards with Sprint ${data.sprint}`,
+            duration: 8
         });
-
     } catch (error) {
-        console.error('Error showing sprint summary:', error);
         return t.alert({
             message: 'Error loading sprint summary',
             duration: 3
@@ -851,51 +268,5 @@ window.TrelloPowerUp.initialize({
             url: 'https://smdynamo.github.io/trello-sprint-tracker/settings.html',
             height: 400
         });
-    },
-    'card-badges': function(t, options) {
-        return t.card('customFieldItems')
-            .then(function(customFields) {
-                const estimateField = customFields.find(field => 
-                    field.customField && field.customField.name.toLowerCase() === 'estimate'
-                );
-                
-                if (estimateField && estimateField.value && estimateField.value.number) {
-                    return [{
-                        text: `${estimateField.value.number} pts`,
-                        color: 'blue'
-                    }];
-                }
-                
-                return [];
-            })
-            .catch(function(error) {
-                console.log('Error getting card badges:', error);
-                return [];
-            });
-    },
-    'card-detail-badges': function(t, options) {
-        return t.card('customFieldItems')
-            .then(function(customFields) {
-                const estimateField = customFields.find(field => 
-                    field.customField && field.customField.name.toLowerCase() === 'estimate'
-                );
-                
-                if (estimateField && estimateField.value && estimateField.value.number) {
-                    return [{
-                        title: 'Story Points',
-                        text: `${estimateField.value.number} points`,
-                        color: 'blue',
-                        callback: function(t) {
-                            return addPointsToSprint(t, estimateField.value.number);
-                        }
-                    }];
-                }
-                
-                return [];
-            })
-            .catch(function(error) {
-                console.log('Error getting card detail badges:', error);
-                return [];
-            });
     }
 });
