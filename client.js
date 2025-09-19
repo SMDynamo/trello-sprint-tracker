@@ -79,21 +79,21 @@ async function updateCardCustomField(trelloContext, fieldName, value) {
         // Update the custom field value based on type
         let updateData = {};
         if (field.type === 'number') {
-            updateData = { number: String(value) };
+            updateData = { number: parseFloat(value) };
         } else if (field.type === 'text') {
             updateData = { text: String(value) };
         } else if (field.type === 'date') {
             updateData = { date: String(value) };
+        } else if (field.type === 'checkbox') {
+            updateData = { checked: Boolean(value) };
         } else {
             console.log(`Field "${fieldName}" has type "${field.type}" - attempting text update`);
             updateData = { text: String(value) };
         }
 
         // Make the API call to update the custom field
-        await trelloContext.request({
-            method: 'PUT',
-            url: `/1/cards/${cardId}/customField/${field.id}/item`,
-            data: { value: updateData }
+        await trelloContext.request('PUT', `/1/cards/${cardId}/customField/${field.id}/item`, {
+            value: updateData
         });
 
         console.log(`Updated ${fieldName} (${field.type}) to ${value}`);
