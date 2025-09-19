@@ -122,6 +122,267 @@ async function setCardSprintNumber(trelloContext) {
     }
 }
 
+// Move card to In Progress with all automations
+async function moveToInProgress(trelloContext) {
+    try {
+        const data = await getSprintData(trelloContext);
+        const branchName = `${data.sprint}-${data.branch}`;
+
+        // Get card and board info
+        const card = await trelloContext.card('id');
+        const board = await trelloContext.board('id', 'lists');
+
+        // Find the In Progress list
+        const inProgressList = board.lists.find(list =>
+            list.name.toLowerCase().includes('in progress')
+        );
+
+        if (!inProgressList) {
+            return trelloContext.alert({
+                message: 'Could not find "In Progress" list',
+                duration: 3
+            });
+        }
+
+        // 1. Join the card (add current member)
+        const member = await trelloContext.member('id');
+        await trelloContext.request({
+            method: 'POST',
+            url: `/1/cards/${card.id}/idMembers`,
+            data: { value: member.id }
+        });
+
+        // 2. Move card to top of In Progress list
+        await trelloContext.request({
+            method: 'PUT',
+            url: `/1/cards/${card.id}`,
+            data: {
+                idList: inProgressList.id,
+                pos: 'top'
+            }
+        });
+
+        // 3. Set Start Date custom field to now
+        await updateCardCustomField(trelloContext, 'Start Date', new Date().toISOString());
+
+        // 4. Set Branch custom field
+        await updateCardCustomField(trelloContext, 'branch', branchName);
+
+        // 5. Set Sprint custom field
+        await updateCardCustomField(trelloContext, 'sprint', data.sprint);
+
+        // 6. Increment branch counter for next use
+        data.branch += 1;
+        await saveSprintData(trelloContext, data);
+
+        // 7. Copy branch to clipboard
+        if (navigator.clipboard) {
+            try {
+                await navigator.clipboard.writeText(branchName);
+            } catch (err) {
+                console.log('Could not copy to clipboard');
+            }
+        }
+
+        return trelloContext.alert({
+            message: `Moved to In Progress with branch ${branchName}`,
+            duration: 4
+        });
+
+    } catch (error) {
+        console.error('Error moving to In Progress:', error);
+        return trelloContext.alert({
+            message: 'Error: ' + error.message,
+            duration: 4
+        });
+    }
+}
+
+// Move card to Code Review
+async function moveToCodeReview(trelloContext) {
+    try {
+        const card = await trelloContext.card('id');
+        const board = await trelloContext.board('id', 'lists');
+
+        // Find the Code Review list
+        const codeReviewList = board.lists.find(list =>
+            list.name.toLowerCase().includes('code review')
+        );
+
+        if (!codeReviewList) {
+            return trelloContext.alert({
+                message: 'Could not find "Code Review" list',
+                duration: 3
+            });
+        }
+
+        // 1. Move card to top of Code Review list
+        await trelloContext.request({
+            method: 'PUT',
+            url: `/1/cards/${card.id}`,
+            data: {
+                idList: codeReviewList.id,
+                pos: 'top'
+            }
+        });
+
+        // 2. Clear Blocker custom field
+        await updateCardCustomField(trelloContext, 'Blocker', '');
+
+        return trelloContext.alert({
+            message: 'Moved to Code Review',
+            duration: 3
+        });
+
+    } catch (error) {
+        console.error('Error moving to Code Review:', error);
+        return trelloContext.alert({
+            message: 'Error: ' + error.message,
+            duration: 4
+        });
+    }
+}
+
+// Move card to Done
+async function moveToDone(trelloContext) {
+    try {
+        const data = await getSprintData(trelloContext);
+        const card = await trelloContext.card('id');
+
+        // Get board with ID for Dev Done board
+        const boards = await trelloContext.request({
+            method: 'GET',
+            url: `/1/members/me/boards`
+        });
+
+        const devDoneBoard = boards.find(board =>
+            board.name.includes('Dev Done')
+        );
+
+        if (!devDoneBoard) {
+            return trelloContext.alert({
+                message: 'Could not find "Dev Done" board',
+                duration: 3
+            });
+        }
+
+        // Get lists from Dev Done board
+        const lists = await trelloContext.request({
+            method: 'GET',
+            url: `/1/boards/${devDoneBoard.id}/lists`
+        });
+
+        const readyList = lists.find(list => list.name === 'Ready');
+
+        if (!readyList) {
+            return trelloContext.alert({
+                message: 'Could not find "Ready" list on Dev Done board',
+                duration: 3
+            });
+        }
+
+        // 1. Set End Date custom field to now
+        await updateCardCustomField(trelloContext, 'End Date', new Date().toISOString());
+
+        // 2. Set Sprint custom field
+        await updateCardCustomField(trelloContext, 'sprint', data.sprint);
+
+        // 3. Move card to top of Ready list on Dev Done board
+        await trelloContext.request({
+            method: 'PUT',
+            url: `/1/cards/${card.id}`,
+            data: {
+                idList: readyList.id,
+                idBoard: devDoneBoard.id,
+                pos: 'top'
+            }
+        });
+
+        return trelloContext.alert({
+            message: `Moved to Done (Sprint ${data.sprint})`,
+            duration: 4
+        });
+
+    } catch (error) {
+        console.error('Error moving to Done:', error);
+        return trelloContext.alert({
+            message: 'Error: ' + error.message,
+            duration: 4
+        });
+    }
+}
+
+// Move card to Awaiting Epic Completion
+async function moveToAwaitingEpic(trelloContext) {
+    try {
+        const data = await getSprintData(trelloContext);
+        const card = await trelloContext.card('id');
+
+        // Get boards
+        const boards = await trelloContext.request({
+            method: 'GET',
+            url: `/1/members/me/boards`
+        });
+
+        const devDoneBoard = boards.find(board =>
+            board.name.includes('Dev Done')
+        );
+
+        if (!devDoneBoard) {
+            return trelloContext.alert({
+                message: 'Could not find "Dev Done" board',
+                duration: 3
+            });
+        }
+
+        // Get lists from Dev Done board
+        const lists = await trelloContext.request({
+            method: 'GET',
+            url: `/1/boards/${devDoneBoard.id}/lists`
+        });
+
+        const awaitingList = lists.find(list =>
+            list.name.includes('Awaiting Epic Completion')
+        );
+
+        if (!awaitingList) {
+            return trelloContext.alert({
+                message: 'Could not find "Awaiting Epic Completion" list',
+                duration: 3
+            });
+        }
+
+        // 1. Set End Date custom field to now
+        await updateCardCustomField(trelloContext, 'End Date', new Date().toISOString());
+
+        // 2. Set Sprint custom field
+        await updateCardCustomField(trelloContext, 'sprint', data.sprint);
+
+        // 3. Move card to top of Awaiting Epic Completion list
+        await trelloContext.request({
+            method: 'PUT',
+            url: `/1/cards/${card.id}`,
+            data: {
+                idList: awaitingList.id,
+                idBoard: devDoneBoard.id,
+                pos: 'top'
+            }
+        });
+
+        return trelloContext.alert({
+            message: `Moved to Awaiting Epic Completion (Sprint ${data.sprint})`,
+            duration: 4
+        });
+
+    } catch (error) {
+        console.error('Error moving to Awaiting Epic:', error);
+        return trelloContext.alert({
+            message: 'Error: ' + error.message,
+            duration: 4
+        });
+    }
+}
+
 // Create a new branch and set it on the card
 async function createBranch(trelloContext) {
     try {
@@ -407,6 +668,30 @@ window.TrelloPowerUp.initialize({
     },
     'card-buttons': function(t, options) {
         return [{
+            icon: 'https://img.icons8.com/ios/50/000000/play.png',
+            text: '1️⃣ In Progress',
+            callback: function(t) {
+                return moveToInProgress(t);
+            }
+        }, {
+            icon: 'https://img.icons8.com/ios/50/000000/code.png',
+            text: '2️⃣ Code Review',
+            callback: function(t) {
+                return moveToCodeReview(t);
+            }
+        }, {
+            icon: 'https://img.icons8.com/ios/50/000000/checkmark.png',
+            text: '3️⃣ Done',
+            callback: function(t) {
+                return moveToDone(t);
+            }
+        }, {
+            icon: 'https://img.icons8.com/ios/50/000000/time.png',
+            text: '⏳ Awaiting Epic',
+            callback: function(t) {
+                return moveToAwaitingEpic(t);
+            }
+        }, {
             icon: 'https://img.icons8.com/ios/50/000000/code-fork.png',
             text: '🌿 Use next branch #',
             callback: function(t) {
