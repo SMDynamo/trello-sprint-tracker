@@ -5,11 +5,142 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sprint Tracker - Trello Power-Up</title>
     <link rel="icon" type="image/x-icon" href="./favicon.ico">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f5f7;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #172b4d;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.2em;
+        }
+        .info {
+            background: #e4fcff;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #00c2e0;
+            margin-bottom: 30px;
+        }
+        .warning {
+            background: #fff3cd;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+            margin-bottom: 30px;
+        }
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        .feature {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        .feature h3 {
+            color: #172b4d;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        .installation {
+            background: #d4edda;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+            margin: 30px 0;
+        }
+        .installation h3 {
+            color: #155724;
+            margin-top: 0;
+        }
+        .url-box {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+            border: 1px solid #dee2e6;
+            word-break: break-all;
+        }
+        .tech-note {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #6c757d;
+            margin-top: 30px;
+        }
+    </style>
 </head>
 <body>
-    <!-- This page serves as the Trello Power-Up connector -->
-    <!-- It's loaded invisibly by Trello to initialize the Power-Up -->
-    
+    <div class="container">
+        <h1>🚀 Sprint Tracker</h1>
+        <h2 style="text-align: center; color: #6c757d; margin-bottom: 40px;">Trello Power-Up for Agile Teams</h2>
+
+        <div class="info">
+            <strong>Welcome to Sprint Tracker!</strong>
+            <p>This Power-Up helps agile development teams track sprint numbers, generate branch names, and manage story points directly within Trello boards.</p>
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ Note:</strong> This page serves as both the GitHub Pages landing page and the Trello Power-Up connector. The Power-Up functionality only works when added to a Trello board.
+        </div>
+
+        <div class="features">
+            <div class="feature">
+                <h3>🔢 Sprint Tracking</h3>
+                <p>Keep track of current sprint numbers and automatically increment them when starting new sprints.</p>
+            </div>
+            <div class="feature">
+                <h3>🌿 Branch Generation</h3>
+                <p>Generate consistent branch names in the format "sprint-branch" (e.g., "44-101") with automatic clipboard copying.</p>
+            </div>
+            <div class="feature">
+                <h3>📊 Story Points</h3>
+                <p>Track completed story points per sprint using Trello's custom fields integration.</p>
+            </div>
+            <div class="feature">
+                <h3>📋 Board Integration</h3>
+                <p>Add buttons to cards and boards, display sprint status badges, and manage settings easily.</p>
+            </div>
+        </div>
+
+        <div class="installation">
+            <h3>📥 Installation Instructions</h3>
+            <ol>
+                <li>Go to your Trello board</li>
+                <li>Click "Show Menu" → "Power-Ups"</li>
+                <li>Click "Custom" at the bottom</li>
+                <li>Enter this URL in the Power-Up URL field:</li>
+            </ol>
+            <div class="url-box">
+                https://smdynamo.github.io/trello-sprint-tracker/
+            </div>
+            <p style="margin-top: 15px;"><strong>That's it!</strong> The Power-Up will be available on your board with new buttons and features.</p>
+        </div>
+
+        <div class="tech-note">
+            <strong>Technical Note:</strong> This page automatically initializes the Trello Power-Up when loaded by Trello. When accessed directly via browser, it serves as documentation and installation guide.
+        </div>
+    </div>
+
+    <!-- Power-Up initialization - loaded invisibly by Trello -->
     <script src="https://p.trellocdn.com/power-up.min.js"></script>
     <script src="client.js"></script>
 </body>

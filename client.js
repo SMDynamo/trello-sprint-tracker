@@ -269,12 +269,11 @@ async function addEstimateToSprint(trelloContext) {
 }
 
 // Get board badge for sprint status
-async function getBoardBadge(t) {
-    try {
-        const data = await getSprintData(t);
-        
-        return [{
-            dynamic: function() {
+function getBoardBadge(t) {
+    return [{
+        dynamic: async function() {
+            try {
+                const data = await getSprintData(t);
                 return {
                     title: 'Sprint Tracker',
                     text: `Sprint #${data.sprint} • Pts ${data.points}`,
@@ -285,35 +284,25 @@ async function getBoardBadge(t) {
                     color: 'blue',
                     refresh: 10
                 };
+            } catch (error) {
+                console.error('Error in getBoardBadge:', error);
+                return {
+                    title: 'Sprint Tracker',
+                    text: 'Error loading sprint data',
+                    color: 'red'
+                };
             }
-        }];
-    } catch (error) {
-        console.error('Error in getBoardBadge:', error);
-        return [{
-            title: 'Sprint Tracker',
-            text: 'Error loading sprint data',
-            color: 'red'
-        }];
-    }
+        }
+    }];
 }
 
 // Show board variables popup
-async function showBoardVars(t) {
-    try {
-        const data = await getSprintData(t);
-        
-        return t.popup({
-            title: 'Sprint Tracker - Board Variables',
-            url: 'https://smdynamo.github.io/trello-sprint-tracker/settings.html',
-            height: 400
-        });
-    } catch (error) {
-        console.error('Error showing board vars:', error);
-        return t.alert({
-            message: 'Error loading board variables',
-            duration: 3
-        });
-    }
+function showBoardVars(t) {
+    return t.popup({
+        title: 'Sprint Tracker - Board Variables',
+        url: 'https://smdynamo.github.io/trello-sprint-tracker/settings.html',
+        height: 400
+    });
 }
 
 // Initialize the Power-Up
