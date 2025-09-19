@@ -45,7 +45,7 @@ async function saveSprintData(trelloContext, data) {
     }
 }
 
-// Update custom field on a card
+// Update custom field on a card using REST API
 async function updateCardCustomField(trelloContext, fieldName, value) {
     try {
         // Get board's custom field definitions
@@ -72,8 +72,16 @@ async function updateCardCustomField(trelloContext, fieldName, value) {
             return false;
         }
 
-        // Get the card we're updating
-        const card = await trelloContext.card('id');
+        // Use context to get card ID instead of t.card()
+        const context = trelloContext.getContext();
+        const cardId = context.card;
+
+        if (!cardId) {
+            console.log('No card context available');
+            return false;
+        }
+
+        console.log('Using card ID from context:', cardId);
 
         // Update the custom field value based on type
         let updateData = {};
@@ -91,7 +99,7 @@ async function updateCardCustomField(trelloContext, fieldName, value) {
         }
 
         // Make the API call to update the custom field
-        await trelloContext.request('PUT', `/1/cards/${card.id}/customField/${field.id}/item`, {
+        await trelloContext.request('PUT', `/1/cards/${cardId}/customField/${field.id}/item`, {
             value: updateData
         });
 
@@ -116,12 +124,11 @@ async function moveToInProgress(trelloContext) {
         // Just show success with branch generation
         console.log('Generated branch name:', branchName);
 
-        // Skip custom fields for now - focusing on basic functionality
-        console.log('Would set custom fields:', {
-            'Start Date': new Date().toISOString(),
-            'Branch': branchName,
-            'Sprint': data.sprint
-        });
+        // Set custom fields using context-based approach
+        console.log('Setting custom fields...');
+        await updateCardCustomField(trelloContext, 'Start Date', new Date().toISOString());
+        await updateCardCustomField(trelloContext, 'Branch', branchName);
+        await updateCardCustomField(trelloContext, 'Sprint', String(data.sprint));
 
         // Increment branch counter and save
         data.branch += 1;
@@ -448,6 +455,20 @@ window.TrelloPowerUp.initialize({
             title: 'Sprint Tracker Settings',
             url: 'https://smdynamo.github.io/trello-sprint-tracker/settings.html',
             height: 400
+        });
+    },
+    'authorization-status': function(t, options) {
+        return t.get('member', 'private', 'token')
+        .then(function(token) {
+            return { authorized: !!token };
+        });
+    },
+    'show-authorization': function(t, options) {
+        return t.popup({
+            title: 'Authorize Sprint Tracker',
+            args: { apiKey: 'your-api-key-here' },
+            url: './authorize.html',
+            height: 140,
         });
     }
 });
