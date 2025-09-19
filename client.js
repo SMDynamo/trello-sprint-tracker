@@ -1,4 +1,4 @@
-// Sprint Tracker Trello Power-Up Client
+// Sprint Tracker Trello Power-Up Client - Updated 2025-01-19 16:45
 window.TrelloPowerUp = window.TrelloPowerUp || {};
 
 // Default values
@@ -73,7 +73,8 @@ async function updateCardCustomField(trelloContext, fieldName, value) {
         }
 
         // Get the card we're updating
-        const card = await trelloContext.card('id');
+        const cardContext = trelloContext.getContext();
+        const cardId = cardContext.card;
 
         // Update the custom field value based on type
         let updateData = {};
@@ -91,7 +92,7 @@ async function updateCardCustomField(trelloContext, fieldName, value) {
         // Make the API call to update the custom field
         await trelloContext.request({
             method: 'PUT',
-            url: `/1/cards/${card.id}/customField/${field.id}/item`,
+            url: `/1/cards/${cardId}/customField/${field.id}/item`,
             data: { value: updateData }
         });
 
@@ -106,17 +107,43 @@ async function updateCardCustomField(trelloContext, fieldName, value) {
 // Move card to In Progress with full automation
 async function moveToInProgress(trelloContext) {
     try {
+        console.log('Starting moveToInProgress automation...');
         const data = await getSprintData(trelloContext);
         const branchName = `${data.sprint}-${data.branch}`;
 
-        // Get current member and card
-        const member = await trelloContext.member('id');
-        const card = await trelloContext.card('id', 'idList', 'idMembers');
+        // Get context information
+        console.log('Getting context...');
+        const context = trelloContext.getContext();
+        console.log('Full context:', context);
+
+        // Get member ID from context or API
+        let memberId;
+        try {
+            const memberData = await trelloContext.request('GET', '/1/members/me?fields=id');
+            memberId = memberData.id;
+            console.log('Member ID from API:', memberId);
+        } catch (error) {
+            console.log('Could not get member ID:', error);
+            memberId = context.member; // fallback to context
+        }
+
+        const cardId = context.card;
+        console.log('Card ID from context:', cardId);
+
+        // Get card details via REST API
+        const cardData = await trelloContext.request('GET', `/1/cards/${cardId}?fields=id,idList,idMembers`);
+        console.log('Card data from API:', cardData);
+
+        const card = {
+            id: cardData.id,
+            idList: cardData.idList,
+            idMembers: cardData.idMembers
+        };
 
         // Add member to card if not already on it
-        if (!card.idMembers.includes(member.id)) {
+        if (!card.idMembers.includes(memberId)) {
             await trelloContext.request('POST', `/1/cards/${card.id}/idMembers`, {
-                value: member.id
+                value: memberId
             });
             console.log('Joined card');
         }
@@ -171,7 +198,8 @@ async function moveToInProgress(trelloContext) {
 // Move card to Code Review
 async function moveToCodeReview(trelloContext) {
     try {
-        const card = await trelloContext.card('id', 'idList');
+        const cardContext = trelloContext.getContext();
+        const card = await trelloContext.request('GET', `/1/cards/${cardContext.card}?fields=id,idList`);
         const lists = await trelloContext.lists('all');
 
         // Find Code Review list
@@ -207,7 +235,8 @@ async function moveToCodeReview(trelloContext) {
 async function moveToDone(trelloContext) {
     try {
         const data = await getSprintData(trelloContext);
-        const card = await trelloContext.card('id', 'customFieldItems');
+        const cardContext = trelloContext.getContext();
+        const card = await trelloContext.request('GET', `/1/cards/${cardContext.card}?fields=id,customFieldItems`);
 
         // Add estimate points to sprint total
         let pointsAdded = 0;
@@ -277,7 +306,8 @@ async function moveToDone(trelloContext) {
 async function moveToAwaitingEpic(trelloContext) {
     try {
         const data = await getSprintData(trelloContext);
-        const card = await trelloContext.card('id', 'customFieldItems');
+        const cardContext = trelloContext.getContext();
+        const card = await trelloContext.request('GET', `/1/cards/${cardContext.card}?fields=id,customFieldItems`);
 
         // Add estimate points to sprint total
         let pointsAdded = 0;
@@ -435,6 +465,7 @@ async function showSprintSummary(t) {
 }
 
 // Initialize the Power-Up
+console.log('Initializing Sprint Tracker Power-Up...');
 window.TrelloPowerUp.initialize({
     'board-buttons': function(t, options) {
         return [{
