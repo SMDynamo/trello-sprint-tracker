@@ -373,7 +373,8 @@ function showBoardVars(t) {
     return t.popup({
         title: 'Sprint Tracker - Board Variables',
         url: 'https://smdynamo.github.io/trello-sprint-tracker/settings.html',
-        height: 400
+        height: 600,
+        width: 500
     });
 }
 
@@ -448,7 +449,8 @@ window.TrelloPowerUp.initialize({
         return t.popup({
             title: 'Sprint Tracker Settings',
             url: 'https://smdynamo.github.io/trello-sprint-tracker/settings.html',
-            height: 400
+            height: 600,
+            width: 500
         });
     },
     'authorization-status': function(t, options) {
@@ -462,7 +464,8 @@ window.TrelloPowerUp.initialize({
             title: 'Authorize Sprint Tracker',
             args: { apiKey: 'your-api-key-here' },
             url: './authorize.html',
-            height: 140,
+            height: 300,
+            width: 400
         });
     }
 });
