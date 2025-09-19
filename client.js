@@ -247,7 +247,32 @@ async function moveToCodeReview(trelloContext) {
 async function moveToDone(trelloContext) {
     try {
         const data = await getSprintData(trelloContext);
-        const card = await trelloContext.card('id');
+        const card = await trelloContext.card('id', 'customFieldItems');
+
+        // Check for estimate and add to sprint points
+        let pointsAdded = 0;
+        if (card.customFieldItems && card.customFieldItems.length > 0) {
+            const board = await trelloContext.board('customFields');
+            if (board.customFields) {
+                const estimateField = board.customFields.find(field =>
+                    field.name && field.name.toLowerCase() === 'estimate' && field.type === 'number'
+                );
+
+                if (estimateField) {
+                    const fieldItem = card.customFieldItems.find(item =>
+                        item.idCustomField === estimateField.id
+                    );
+
+                    if (fieldItem && fieldItem.value && fieldItem.value.number) {
+                        pointsAdded = parseFloat(fieldItem.value.number);
+                        if (pointsAdded > 0) {
+                            data.points += pointsAdded;
+                            await saveSprintData(trelloContext, data);
+                        }
+                    }
+                }
+            }
+        }
 
         // Get board with ID for Dev Done board
         const boards = await trelloContext.request({
@@ -298,8 +323,12 @@ async function moveToDone(trelloContext) {
             }
         });
 
+        const message = pointsAdded > 0
+            ? `Moved to Done (Sprint ${data.sprint}) + ${pointsAdded} points added`
+            : `Moved to Done (Sprint ${data.sprint})`;
+
         return trelloContext.alert({
-            message: `Moved to Done (Sprint ${data.sprint})`,
+            message: message,
             duration: 4
         });
 
@@ -316,7 +345,32 @@ async function moveToDone(trelloContext) {
 async function moveToAwaitingEpic(trelloContext) {
     try {
         const data = await getSprintData(trelloContext);
-        const card = await trelloContext.card('id');
+        const card = await trelloContext.card('id', 'customFieldItems');
+
+        // Check for estimate and add to sprint points
+        let pointsAdded = 0;
+        if (card.customFieldItems && card.customFieldItems.length > 0) {
+            const board = await trelloContext.board('customFields');
+            if (board.customFields) {
+                const estimateField = board.customFields.find(field =>
+                    field.name && field.name.toLowerCase() === 'estimate' && field.type === 'number'
+                );
+
+                if (estimateField) {
+                    const fieldItem = card.customFieldItems.find(item =>
+                        item.idCustomField === estimateField.id
+                    );
+
+                    if (fieldItem && fieldItem.value && fieldItem.value.number) {
+                        pointsAdded = parseFloat(fieldItem.value.number);
+                        if (pointsAdded > 0) {
+                            data.points += pointsAdded;
+                            await saveSprintData(trelloContext, data);
+                        }
+                    }
+                }
+            }
+        }
 
         // Get boards
         const boards = await trelloContext.request({
@@ -369,8 +423,12 @@ async function moveToAwaitingEpic(trelloContext) {
             }
         });
 
+        const message = pointsAdded > 0
+            ? `Moved to Awaiting Epic Completion (Sprint ${data.sprint}) + ${pointsAdded} points added`
+            : `Moved to Awaiting Epic Completion (Sprint ${data.sprint})`;
+
         return trelloContext.alert({
-            message: `Moved to Awaiting Epic Completion (Sprint ${data.sprint})`,
+            message: message,
             duration: 4
         });
 
@@ -702,12 +760,6 @@ window.TrelloPowerUp.initialize({
             text: '📅 Set Sprint Number',
             callback: function(t) {
                 return setCardSprintNumber(t);
-            }
-        }, {
-            icon: 'https://img.icons8.com/ios/50/000000/statistics.png',
-            text: '📊 Add estimate to sprint points',
-            callback: function(t) {
-                return addEstimateToSprint(t);
             }
         }];
     },
