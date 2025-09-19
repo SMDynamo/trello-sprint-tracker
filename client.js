@@ -389,33 +389,6 @@ async function startNewSprint(trelloContext) {
     }
 }
 
-// Get board badge for sprint status
-function getBoardBadge(t) {
-    return [{
-        dynamic: async function() {
-            try {
-                const data = await getSprintData(t);
-                return {
-                    title: 'Sprint Tracker',
-                    text: `Sprint #${data.sprint} • Pts ${data.points}`,
-                    icon: {
-                        dark: 'https://smdynamo.github.io/trello-sprint-tracker/icon-light.svg',
-                        light: 'https://smdynamo.github.io/trello-sprint-tracker/icon-dark.svg'
-                    },
-                    color: 'blue',
-                    refresh: 10
-                };
-            } catch (error) {
-                console.error('Error in getBoardBadge:', error);
-                return {
-                    title: 'Sprint Tracker',
-                    text: 'Error loading sprint data',
-                    color: 'red'
-                };
-            }
-        }
-    }];
-}
 
 // Show board variables popup
 function showBoardVars(t) {
@@ -492,9 +465,6 @@ window.TrelloPowerUp.initialize({
                 return moveToAwaitingEpic(t);
             }
         }];
-    },
-    'board-badges': function(t, options) {
-        return getBoardBadge(t);
     },
     'show-settings': function(t, options) {
         return t.popup({

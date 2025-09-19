@@ -5,7 +5,6 @@
     "capabilities": [
         "board-buttons",
         "card-buttons",
-        "board-badges",
         "show-settings"
     ],
     "connectorUrl": "https://smdynamo.github.io/trello-sprint-tracker/",
