@@ -141,7 +141,7 @@ async function moveToInProgress(trelloContext) {
 
         // Get card and board info
         const card = await trelloContext.card('id');
-        const board = await trelloContext.board('id', 'lists');
+        const board = await trelloContext.board('lists');
 
         // Find the In Progress list
         const inProgressList = board.lists.find(list =>
@@ -246,7 +246,7 @@ async function moveToInProgress(trelloContext) {
 async function moveToCodeReview(trelloContext) {
     try {
         const card = await trelloContext.card('id');
-        const board = await trelloContext.board('id', 'lists');
+        const board = await trelloContext.board('lists');
 
         // Find the Code Review list
         const codeReviewList = board.lists.find(list =>
