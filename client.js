@@ -45,18 +45,101 @@ async function saveSprintData(trelloContext, data) {
     }
 }
 
-// Create a new branch
+// Update custom field on a card
+async function updateCardCustomField(trelloContext, fieldName, value) {
+    try {
+        // Get board's custom field definitions
+        const board = await trelloContext.board('customFields');
+        if (!board.customFields || board.customFields.length === 0) {
+            console.log('No custom fields defined on board');
+            return false;
+        }
+
+        // Find the field by name (case-insensitive)
+        const field = board.customFields.find(f =>
+            f.name && f.name.toLowerCase() === fieldName.toLowerCase()
+        );
+
+        if (!field) {
+            console.log(`Custom field "${fieldName}" not found on board`);
+            return false;
+        }
+
+        // Get the card we're updating
+        const card = await trelloContext.card('id');
+
+        // Update the custom field value based on type
+        let updateData = {};
+        if (field.type === 'number') {
+            updateData = { number: String(value) };
+        } else if (field.type === 'text') {
+            updateData = { text: String(value) };
+        } else {
+            console.log(`Unsupported field type: ${field.type}`);
+            return false;
+        }
+
+        // Make the API call to update the custom field
+        await trelloContext.request({
+            method: 'PUT',
+            url: `/1/cards/${card.id}/customField/${field.id}/item`,
+            data: { value: updateData }
+        });
+
+        console.log(`Updated ${fieldName} to ${value}`);
+        return true;
+    } catch (error) {
+        console.error(`Error updating custom field ${fieldName}:`, error);
+        return false;
+    }
+}
+
+// Set sprint number on current card's custom field
+async function setCardSprintNumber(trelloContext) {
+    try {
+        const data = await getSprintData(trelloContext);
+
+        // Update the sprint custom field on this card
+        const updated = await updateCardCustomField(trelloContext, 'sprint', data.sprint);
+
+        if (updated) {
+            return trelloContext.alert({
+                message: `Card sprint set to ${data.sprint}`,
+                duration: 3
+            });
+        } else {
+            return trelloContext.alert({
+                message: 'Could not update sprint field. Make sure "sprint" custom field exists.',
+                duration: 4
+            });
+        }
+    } catch (error) {
+        console.error('Error setting card sprint:', error);
+        return trelloContext.alert({
+            message: 'Error setting sprint number',
+            duration: 3
+        });
+    }
+}
+
+// Create a new branch and set it on the card
 async function createBranch(trelloContext) {
     try {
         const data = await getSprintData(trelloContext);
         const branchName = `${data.sprint}-${data.branch}`;
-        
-        // Increment branch counter
+
+        // Update the branch custom field on this card
+        await updateCardCustomField(trelloContext, 'branch', branchName);
+
+        // Also update sprint field since card is moving to in progress
+        await updateCardCustomField(trelloContext, 'sprint', data.sprint);
+
+        // Increment branch counter for next use
         data.branch += 1;
-        
+
         // Save updated data
         const saved = await saveSprintData(trelloContext, data);
-        
+
         if (saved) {
             // Copy branch name to clipboard if possible
             let copied = false;
@@ -69,7 +152,7 @@ async function createBranch(trelloContext) {
                     console.log('Could not copy to clipboard:', clipboardError);
                 }
             }
-            
+
             // Attach branch info to the card
             try {
                 await trelloContext.attach({
@@ -80,12 +163,12 @@ async function createBranch(trelloContext) {
                 console.warn('Could not attach branch to card:', attachError);
                 // Continue execution even if attachment fails
             }
-            
+
             // Show success message
-            const message = copied 
+            const message = copied
                 ? `Branch ${branchName} created and copied to clipboard!`
                 : `Branch ${branchName} created and attached to card!`;
-                
+
             return trelloContext.alert({
                 message: message,
                 duration: 5
@@ -96,7 +179,7 @@ async function createBranch(trelloContext) {
                 duration: 3
             });
         }
-        
+
     } catch (error) {
         console.error('Error in createBranch:', error);
         if (trelloContext && trelloContext.alert) {
@@ -328,6 +411,12 @@ window.TrelloPowerUp.initialize({
             text: '🌿 Use next branch #',
             callback: function(t) {
                 return createBranch(t);
+            }
+        }, {
+            icon: 'https://img.icons8.com/ios/50/000000/calendar.png',
+            text: '📅 Set Sprint Number',
+            callback: function(t) {
+                return setCardSprintNumber(t);
             }
         }, {
             icon: 'https://img.icons8.com/ios/50/000000/statistics.png',
