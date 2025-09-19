@@ -73,8 +73,7 @@ async function updateCardCustomField(trelloContext, fieldName, value) {
         }
 
         // Get the card we're updating
-        const cardContext = trelloContext.getContext();
-        const cardId = cardContext.card;
+        const card = await trelloContext.card('id');
 
         // Update the custom field value based on type
         let updateData = {};
@@ -92,7 +91,7 @@ async function updateCardCustomField(trelloContext, fieldName, value) {
         }
 
         // Make the API call to update the custom field
-        await trelloContext.request('PUT', `/1/cards/${cardId}/customField/${field.id}/item`, {
+        await trelloContext.request('PUT', `/1/cards/${card.id}/customField/${field.id}/item`, {
             value: updateData
         });
 
@@ -111,39 +110,19 @@ async function moveToInProgress(trelloContext) {
         const data = await getSprintData(trelloContext);
         const branchName = `${data.sprint}-${data.branch}`;
 
-        // Get context information
-        console.log('Getting context...');
-        const context = trelloContext.getContext();
-        console.log('Full context:', context);
+        // Get card information using official SDK syntax
+        console.log('Getting card data...');
+        const card = await trelloContext.card('id', 'name', 'idList', 'idMembers');
+        console.log('Card retrieved:', card);
 
-        // Get member ID from context or API
-        let memberId;
-        try {
-            const memberData = await trelloContext.request('GET', '/1/members/me?fields=id');
-            memberId = memberData.id;
-            console.log('Member ID from API:', memberId);
-        } catch (error) {
-            console.log('Could not get member ID:', error);
-            memberId = context.member; // fallback to context
-        }
-
-        const cardId = context.card;
-        console.log('Card ID from context:', cardId);
-
-        // Get card details via REST API
-        const cardData = await trelloContext.request('GET', `/1/cards/${cardId}?fields=id,idList,idMembers`);
-        console.log('Card data from API:', cardData);
-
-        const card = {
-            id: cardData.id,
-            idList: cardData.idList,
-            idMembers: cardData.idMembers
-        };
+        // Get member information
+        const member = await trelloContext.member('id');
+        console.log('Member ID:', member.id);
 
         // Add member to card if not already on it
-        if (!card.idMembers.includes(memberId)) {
+        if (!card.idMembers.includes(member.id)) {
             await trelloContext.request('POST', `/1/cards/${card.id}/idMembers`, {
-                value: memberId
+                value: member.id
             });
             console.log('Joined card');
         }
@@ -155,7 +134,6 @@ async function moveToInProgress(trelloContext) {
         );
 
         if (inProgressList && card.idList !== inProgressList.id) {
-            // Move card to In Progress list
             await trelloContext.request('PUT', `/1/cards/${card.id}`, {
                 idList: inProgressList.id,
                 pos: 'top'
@@ -168,7 +146,7 @@ async function moveToInProgress(trelloContext) {
         await updateCardCustomField(trelloContext, 'Branch', branchName);
         await updateCardCustomField(trelloContext, 'Sprint', String(data.sprint));
 
-        // Increment branch counter
+        // Increment branch counter and save
         data.branch += 1;
         await saveSprintData(trelloContext, data);
 
