@@ -45,11 +45,101 @@ async function saveSprintData(trelloContext, data) {
     }
 }
 
-// Move card to In Progress - simplified version
+// Update custom field on a card
+async function updateCardCustomField(trelloContext, fieldName, value) {
+    try {
+        // Get board's custom field definitions
+        const board = await trelloContext.board('customFields');
+        if (!board.customFields || board.customFields.length === 0) {
+            console.log('No custom fields defined on board');
+            return false;
+        }
+
+        // Find the field by name (case-sensitive first, then case-insensitive)
+        let field = board.customFields.find(f =>
+            f.name && f.name === fieldName
+        );
+
+        if (!field) {
+            field = board.customFields.find(f =>
+                f.name && f.name.toLowerCase() === fieldName.toLowerCase()
+            );
+        }
+
+        if (!field) {
+            console.log(`Custom field "${fieldName}" not found. Available fields:`,
+                board.customFields.map(f => f.name).join(', '));
+            return false;
+        }
+
+        // Get the card we're updating
+        const card = await trelloContext.card('id');
+
+        // Update the custom field value based on type
+        let updateData = {};
+        if (field.type === 'number') {
+            updateData = { number: String(value) };
+        } else if (field.type === 'text') {
+            updateData = { text: String(value) };
+        } else if (field.type === 'date') {
+            updateData = { date: String(value) };
+        } else {
+            console.log(`Field "${fieldName}" has type "${field.type}" - attempting text update`);
+            updateData = { text: String(value) };
+        }
+
+        // Make the API call to update the custom field
+        await trelloContext.request({
+            method: 'PUT',
+            url: `/1/cards/${card.id}/customField/${field.id}/item`,
+            data: { value: updateData }
+        });
+
+        console.log(`Updated ${fieldName} (${field.type}) to ${value}`);
+        return true;
+    } catch (error) {
+        console.error(`Error updating custom field ${fieldName}:`, error);
+        return false;
+    }
+}
+
+// Move card to In Progress with full automation
 async function moveToInProgress(trelloContext) {
     try {
         const data = await getSprintData(trelloContext);
         const branchName = `${data.sprint}-${data.branch}`;
+
+        // Get current member and card
+        const member = await trelloContext.member('id');
+        const card = await trelloContext.card('id', 'idList', 'idMembers');
+
+        // Add member to card if not already on it
+        if (!card.idMembers.includes(member.id)) {
+            await trelloContext.request('POST', `/1/cards/${card.id}/idMembers`, {
+                value: member.id
+            });
+            console.log('Joined card');
+        }
+
+        // Find In Progress list
+        const lists = await trelloContext.lists('all');
+        const inProgressList = lists.find(list =>
+            list.name.toLowerCase().includes('in progress')
+        );
+
+        if (inProgressList && card.idList !== inProgressList.id) {
+            // Move card to In Progress list
+            await trelloContext.request('PUT', `/1/cards/${card.id}`, {
+                idList: inProgressList.id,
+                pos: 'top'
+            });
+            console.log('Moved to In Progress');
+        }
+
+        // Set custom fields
+        await updateCardCustomField(trelloContext, 'Start Date', new Date().toISOString());
+        await updateCardCustomField(trelloContext, 'Branch', branchName);
+        await updateCardCustomField(trelloContext, 'Sprint', String(data.sprint));
 
         // Increment branch counter
         data.branch += 1;
@@ -65,14 +155,14 @@ async function moveToInProgress(trelloContext) {
         }
 
         return trelloContext.alert({
-            message: `Branch ${branchName} created and copied!\n\nManual steps:\n• Join card\n• Move to In Progress\n• Set Branch: ${branchName}\n• Set Sprint: ${data.sprint}\n• Set Start Date: now`,
-            duration: 10
+            message: `✅ Automated: Joined card, moved to In Progress, set Branch: ${branchName}, Sprint: ${data.sprint}, Start Date, copied to clipboard!`,
+            duration: 6
         });
 
     } catch (error) {
         console.error('Error in moveToInProgress:', error);
         return trelloContext.alert({
-            message: `Error: Could not create branch`,
+            message: `❌ Error: ${error.message || 'Could not complete automation'}`,
             duration: 4
         });
     }
@@ -80,24 +170,105 @@ async function moveToInProgress(trelloContext) {
 
 // Move card to Code Review
 async function moveToCodeReview(trelloContext) {
-    return trelloContext.alert({
-        message: `Code Review Steps:\n\n• Move to Code Review list\n• Clear Blocker field\n• Assign reviewer`,
-        duration: 6
-    });
+    try {
+        const card = await trelloContext.card('id', 'idList');
+        const lists = await trelloContext.lists('all');
+
+        // Find Code Review list
+        const codeReviewList = lists.find(list =>
+            list.name.toLowerCase().includes('code review')
+        );
+
+        if (codeReviewList && card.idList !== codeReviewList.id) {
+            await trelloContext.request('PUT', `/1/cards/${card.id}`, {
+                idList: codeReviewList.id,
+                pos: 'top'
+            });
+        }
+
+        // Clear Blocker field
+        await updateCardCustomField(trelloContext, 'Blocker', '');
+
+        return trelloContext.alert({
+            message: `✅ Automated: Moved to Code Review, cleared Blocker field`,
+            duration: 4
+        });
+
+    } catch (error) {
+        console.error('Error in moveToCodeReview:', error);
+        return trelloContext.alert({
+            message: `❌ Error: ${error.message || 'Could not complete automation'}`,
+            duration: 4
+        });
+    }
 }
 
 // Move card to Done
 async function moveToDone(trelloContext) {
     try {
         const data = await getSprintData(trelloContext);
+        const card = await trelloContext.card('id', 'customFieldItems');
+
+        // Add estimate points to sprint total
+        let pointsAdded = 0;
+        if (card.customFieldItems && card.customFieldItems.length > 0) {
+            const board = await trelloContext.board('customFields');
+            if (board.customFields) {
+                const estimateField = board.customFields.find(field =>
+                    field.name && field.name.toLowerCase() === 'estimate' && field.type === 'number'
+                );
+
+                if (estimateField) {
+                    const fieldItem = card.customFieldItems.find(item =>
+                        item.idCustomField === estimateField.id
+                    );
+
+                    if (fieldItem && fieldItem.value && fieldItem.value.number) {
+                        pointsAdded = parseFloat(fieldItem.value.number);
+                        if (pointsAdded > 0) {
+                            data.points += pointsAdded;
+                            await saveSprintData(trelloContext, data);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Set End Date and Sprint
+        await updateCardCustomField(trelloContext, 'End Date', new Date().toISOString());
+        await updateCardCustomField(trelloContext, 'Sprint', String(data.sprint));
+
+        // Find Dev Done board and move card
+        const boards = await trelloContext.request('GET', '/1/members/me/boards');
+        const devDoneBoard = boards.find(board => board.name.includes('Dev Done'));
+
+        if (devDoneBoard) {
+            const lists = await trelloContext.request('GET', `/1/boards/${devDoneBoard.id}/lists`);
+            const readyList = lists.find(list => list.name === 'Ready');
+
+            if (readyList) {
+                await trelloContext.request('PUT', `/1/cards/${card.id}`, {
+                    idList: readyList.id,
+                    idBoard: devDoneBoard.id,
+                    pos: 'top'
+                });
+            }
+        }
+
+        const message = pointsAdded > 0
+            ? `✅ Automated: Set End Date, Sprint ${data.sprint}, moved to Done board, added ${pointsAdded} points!`
+            : `✅ Automated: Set End Date, Sprint ${data.sprint}, moved to Done board`;
+
         return trelloContext.alert({
-            message: `Done Steps (Sprint ${data.sprint}):\n\n• Set End Date: now\n• Set Sprint: ${data.sprint}\n• Move to Ready on Dev Done board\n• Add estimate to sprint points`,
-            duration: 10
+            message: message,
+            duration: 6
         });
+
     } catch (error) {
+        console.error('Error in moveToDone:', error);
         return trelloContext.alert({
-            message: 'Error getting sprint data',
-            duration: 3
+            message: `❌ Error: ${error.message || 'Could not complete automation'}`,
+            duration: 4
         });
     }
 }
@@ -106,14 +277,68 @@ async function moveToDone(trelloContext) {
 async function moveToAwaitingEpic(trelloContext) {
     try {
         const data = await getSprintData(trelloContext);
+        const card = await trelloContext.card('id', 'customFieldItems');
+
+        // Add estimate points to sprint total
+        let pointsAdded = 0;
+        if (card.customFieldItems && card.customFieldItems.length > 0) {
+            const board = await trelloContext.board('customFields');
+            if (board.customFields) {
+                const estimateField = board.customFields.find(field =>
+                    field.name && field.name.toLowerCase() === 'estimate' && field.type === 'number'
+                );
+
+                if (estimateField) {
+                    const fieldItem = card.customFieldItems.find(item =>
+                        item.idCustomField === estimateField.id
+                    );
+
+                    if (fieldItem && fieldItem.value && fieldItem.value.number) {
+                        pointsAdded = parseFloat(fieldItem.value.number);
+                        if (pointsAdded > 0) {
+                            data.points += pointsAdded;
+                            await saveSprintData(trelloContext, data);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Set End Date and Sprint
+        await updateCardCustomField(trelloContext, 'End Date', new Date().toISOString());
+        await updateCardCustomField(trelloContext, 'Sprint', String(data.sprint));
+
+        // Find Dev Done board and move to Awaiting Epic list
+        const boards = await trelloContext.request('GET', '/1/members/me/boards');
+        const devDoneBoard = boards.find(board => board.name.includes('Dev Done'));
+
+        if (devDoneBoard) {
+            const lists = await trelloContext.request('GET', `/1/boards/${devDoneBoard.id}/lists`);
+            const awaitingList = lists.find(list => list.name.includes('Awaiting Epic'));
+
+            if (awaitingList) {
+                await trelloContext.request('PUT', `/1/cards/${card.id}`, {
+                    idList: awaitingList.id,
+                    idBoard: devDoneBoard.id,
+                    pos: 'top'
+                });
+            }
+        }
+
+        const message = pointsAdded > 0
+            ? `✅ Automated: Set End Date, Sprint ${data.sprint}, moved to Awaiting Epic, added ${pointsAdded} points!`
+            : `✅ Automated: Set End Date, Sprint ${data.sprint}, moved to Awaiting Epic`;
+
         return trelloContext.alert({
-            message: `Awaiting Epic Steps (Sprint ${data.sprint}):\n\n• Set End Date: now\n• Set Sprint: ${data.sprint}\n• Move to Awaiting Epic list\n• Add estimate to sprint points`,
-            duration: 10
+            message: message,
+            duration: 6
         });
+
     } catch (error) {
+        console.error('Error in moveToAwaitingEpic:', error);
         return trelloContext.alert({
-            message: 'Error getting sprint data',
-            duration: 3
+            message: `❌ Error: ${error.message || 'Could not complete automation'}`,
+            duration: 4
         });
     }
 }
