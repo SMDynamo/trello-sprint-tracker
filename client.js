@@ -755,12 +755,6 @@ window.TrelloPowerUp.initialize({
             callback: function(t) {
                 return createBranch(t);
             }
-        }, {
-            icon: 'https://img.icons8.com/ios/50/000000/calendar.png',
-            text: '📅 Set Sprint Number',
-            callback: function(t) {
-                return setCardSprintNumber(t);
-            }
         }];
     },
     'board-badges': function(t, options) {
