@@ -309,20 +309,14 @@ function showBoardVars(t) {
 window.TrelloPowerUp.initialize({
     'board-buttons': function(t, options) {
         return [{
-            icon: {
-                dark: 'https://smdynamo.github.io/trello-sprint-tracker/icon-light.svg',
-                light: 'https://smdynamo.github.io/trello-sprint-tracker/icon-dark.svg'
-            },
-            text: 'Board Vars',
+            icon: 'https://img.icons8.com/ios/50/000000/settings.png',
+            text: '⚙️ Board Vars',
             callback: function(t) {
                 return showBoardVars(t);
             }
         }, {
-            icon: {
-                dark: 'https://smdynamo.github.io/trello-sprint-tracker/icon-light.svg',
-                light: 'https://smdynamo.github.io/trello-sprint-tracker/icon-dark.svg'
-            },
-            text: 'New Sprint',
+            icon: 'https://img.icons8.com/ios/50/000000/rocket.png',
+            text: '🚀 New Sprint',
             callback: function(t) {
                 return startNewSprint(t);
             }
@@ -330,20 +324,14 @@ window.TrelloPowerUp.initialize({
     },
     'card-buttons': function(t, options) {
         return [{
-            icon: {
-                dark: 'https://smdynamo.github.io/trello-sprint-tracker/icon-light.svg',
-                light: 'https://smdynamo.github.io/trello-sprint-tracker/icon-dark.svg'
-            }, 
-            text: 'Use next branch #',
+            icon: 'https://img.icons8.com/ios/50/000000/code-fork.png',
+            text: '🌿 Use next branch #',
             callback: function(t) {
                 return createBranch(t);
             }
         }, {
-            icon: {
-                dark: 'https://smdynamo.github.io/trello-sprint-tracker/icon-light.svg',
-                light: 'https://smdynamo.github.io/trello-sprint-tracker/icon-dark.svg'
-            },
-            text: 'Add estimate to sprint points',
+            icon: 'https://img.icons8.com/ios/50/000000/statistics.png',
+            text: '📊 Add estimate to sprint points',
             callback: function(t) {
                 return addEstimateToSprint(t);
             }
